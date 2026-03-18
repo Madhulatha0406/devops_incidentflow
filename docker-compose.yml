@@ -1,0 +1,113 @@
+services:
+  mongo:
+    image: mongo:7
+    container_name: incidentflow-mongo
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend-blue:
+    build:
+      context: ./backend
+    image: ${DOCKER_REGISTRY}/${BACKEND_IMAGE}:blue
+    container_name: incidentflow-backend-blue
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      ACTIVE_COLOR: blue
+      MONGO_URI: mongodb://mongo:27017/incidentflow
+      CLIENT_ORIGIN: http://localhost:${PROXY_PORT}
+    depends_on:
+      mongo:
+        condition: service_healthy
+    expose:
+      - "5000"
+    ports:
+      - "${BACKEND_BLUE_PORT}:5000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:5000/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend-green:
+    build:
+      context: ./backend
+    image: ${DOCKER_REGISTRY}/${BACKEND_IMAGE}:green
+    container_name: incidentflow-backend-green
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      ACTIVE_COLOR: green
+      MONGO_URI: mongodb://mongo:27017/incidentflow
+      CLIENT_ORIGIN: http://localhost:${PROXY_PORT}
+    depends_on:
+      mongo:
+        condition: service_healthy
+    expose:
+      - "5000"
+    ports:
+      - "${BACKEND_GREEN_PORT}:5000"
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:5000/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  frontend-blue:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: /api
+    image: ${DOCKER_REGISTRY}/${FRONTEND_IMAGE}:blue
+    container_name: incidentflow-frontend-blue
+    restart: unless-stopped
+    expose:
+      - "80"
+    ports:
+      - "${FRONTEND_BLUE_PORT}:80"
+
+  frontend-green:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: /api
+    image: ${DOCKER_REGISTRY}/${FRONTEND_IMAGE}:green
+    container_name: incidentflow-frontend-green
+    restart: unless-stopped
+    expose:
+      - "80"
+    ports:
+      - "${FRONTEND_GREEN_PORT}:80"
+
+  proxy:
+    build:
+      context: ./deploy/proxy
+    container_name: incidentflow-proxy
+    restart: unless-stopped
+    environment:
+      ACTIVE_BACKEND_HOST: ${ACTIVE_BACKEND_HOST:-backend-blue}
+      ACTIVE_FRONTEND_HOST: ${ACTIVE_FRONTEND_HOST:-frontend-blue}
+    depends_on:
+      backend-blue:
+        condition: service_started
+      frontend-blue:
+        condition: service_started
+    ports:
+      - "${PROXY_PORT}:80"
+
+volumes:
+  mongo_data:
