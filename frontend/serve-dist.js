@@ -5,6 +5,8 @@ const path = require("path");
 const root = path.join(__dirname, "dist");
 const port = Number(process.env.FRONTEND_PORT || 4173);
 const host = process.env.FRONTEND_HOST || "127.0.0.1";
+const backendHost = process.env.BACKEND_HOST || "127.0.0.1";
+const backendPort = Number(process.env.BACKEND_PORT || 5000);
 
 const contentTypes = {
   ".html": "text/html; charset=utf-8",
@@ -16,6 +18,30 @@ const contentTypes = {
 };
 
 const server = http.createServer((req, res) => {
+  if (req.url.startsWith("/api/") || req.url === "/health") {
+    const proxyRequest = http.request(
+      {
+        hostname: backendHost,
+        port: backendPort,
+        path: req.url,
+        method: req.method,
+        headers: req.headers
+      },
+      (proxyResponse) => {
+        res.writeHead(proxyResponse.statusCode || 502, proxyResponse.headers);
+        proxyResponse.pipe(res);
+      }
+    );
+
+    proxyRequest.on("error", () => {
+      res.statusCode = 502;
+      res.end("Backend unavailable");
+    });
+
+    req.pipe(proxyRequest);
+    return;
+  }
+
   const requestPath = req.url === "/" ? "/index.html" : req.url;
   const filePath = path.join(root, requestPath.replace(/^\/+/, ""));
 
