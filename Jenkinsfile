@@ -26,31 +26,60 @@ pipeline {
 
     stage('Install Dependencies') {
       steps {
-        sh 'cd backend && npm ci'
-        sh 'cd frontend && npm ci'
+        script {
+          if (isUnix()) {
+            sh 'cd backend && npm ci'
+            sh 'cd frontend && npm ci'
+          } else {
+            bat 'cd backend && npm ci'
+            bat 'cd frontend && npm ci'
+          }
+        }
       }
     }
 
     stage('Run Tests') {
       steps {
-        sh 'cd backend && npm run test:ci'
-        sh 'cd frontend && npm run test:ci'
+        script {
+          if (isUnix()) {
+            sh 'cd backend && npm run test:ci'
+            sh 'cd frontend && npm run test:ci'
+          } else {
+            bat 'cd backend && npm run test:ci'
+            bat 'cd frontend && npm run test:ci'
+          }
+        }
       }
     }
 
     stage('Build Images') {
       steps {
-        sh "docker build -t ${REGISTRY}/${BACKEND_IMAGE}:${env.BUILD_NUMBER} backend"
-        sh "docker build -t ${REGISTRY}/${FRONTEND_IMAGE}:${env.BUILD_NUMBER} frontend"
+        script {
+          if (isUnix()) {
+            sh "docker build -t ${REGISTRY}/${BACKEND_IMAGE}:${env.BUILD_NUMBER} backend"
+            sh "docker build -t ${REGISTRY}/${FRONTEND_IMAGE}:${env.BUILD_NUMBER} frontend"
+          } else {
+            bat "docker build -t %REGISTRY%/%BACKEND_IMAGE%:%BUILD_NUMBER% backend"
+            bat "docker build -t %REGISTRY%/%FRONTEND_IMAGE%:%BUILD_NUMBER% frontend"
+          }
+        }
       }
     }
 
     stage('Push Images') {
       steps {
         withCredentials([usernamePassword(credentialsId: 'docker-registry-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-          sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
-          sh "docker push ${REGISTRY}/${BACKEND_IMAGE}:${env.BUILD_NUMBER}"
-          sh "docker push ${REGISTRY}/${FRONTEND_IMAGE}:${env.BUILD_NUMBER}"
+          script {
+            if (isUnix()) {
+              sh 'echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin'
+              sh "docker push ${REGISTRY}/${BACKEND_IMAGE}:${env.BUILD_NUMBER}"
+              sh "docker push ${REGISTRY}/${FRONTEND_IMAGE}:${env.BUILD_NUMBER}"
+            } else {
+              bat '@echo off && echo %DOCKER_PASS%| docker login -u %DOCKER_USER% --password-stdin'
+              bat 'docker push %REGISTRY%/%BACKEND_IMAGE%:%BUILD_NUMBER%'
+              bat 'docker push %REGISTRY%/%FRONTEND_IMAGE%:%BUILD_NUMBER%'
+            }
+          }
         }
       }
     }
