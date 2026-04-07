@@ -18,7 +18,7 @@ const normalizeEmail = (email) => String(email || "").trim().toLowerCase();
 
 const createAuthService = ({ repositories, jwtSecret, jwtExpiresIn, bcryptLib = bcrypt }) => ({
   seedDefaultUsers: async (defaultUsers) => repositories.users.seedDefaults(defaultUsers),
-  createUser: async ({ name, email, password, role = "student", department }) => {
+  createUser: async ({ name, email, password, role = "student", department, specialty }) => {
     const normalizedEmail = normalizeEmail(email);
     const existing = await repositories.users.findByEmail(normalizedEmail);
 
@@ -32,7 +32,8 @@ const createAuthService = ({ repositories, jwtSecret, jwtExpiresIn, bcryptLib = 
       email: normalizedEmail,
       passwordHash,
       role,
-      department: department || "Campus Services"
+      department: department || "Campus Services",
+      specialty: specialty || ""
     });
 
     return sanitizeUser(user);
@@ -52,7 +53,8 @@ const createAuthService = ({ repositories, jwtSecret, jwtExpiresIn, bcryptLib = 
           email: normalizedEmail,
           passwordHash: await bcryptLib.hash(payload.password, 10),
           role: "student",
-          department: payload.department || "Campus Services"
+          department: payload.department || "Campus Services",
+          specialty: payload.specialty || ""
         });
       })()
     ),

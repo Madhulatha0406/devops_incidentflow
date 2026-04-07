@@ -160,43 +160,83 @@ button:disabled {
 }
 
 .app-shell {
-  max-width: 1400px;
+  max-width: 1500px;
   margin: 0 auto;
-  padding: 2.25rem 1.5rem 3.5rem;
+  min-height: 100vh;
+  padding: 1.25rem 1.25rem 1.5rem;
 }
 
 .app-layout {
   display: grid;
-  grid-template-columns: minmax(280px, 320px) minmax(0, 1fr);
-  gap: clamp(2rem, 5vw, 5rem);
-  align-items: start;
+  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+  gap: clamp(1.5rem, 4vw, 3.25rem);
+  height: calc(100vh - 2.75rem);
+  min-height: calc(100vh - 2.75rem);
+  align-items: stretch;
 }
 
 .app-rail {
-  position: sticky;
-  top: 2rem;
-  align-self: start;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 0.35rem;
+  padding-bottom: 0.6rem;
+  scrollbar-gutter: stable;
+}
+
+.content-column {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 0.35rem;
+  padding-bottom: 2rem;
+  scrollbar-gutter: stable;
+}
+
+.app-rail,
+.content-column {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(17, 24, 39, 0.15) transparent;
+}
+
+.app-rail::-webkit-scrollbar,
+.content-column::-webkit-scrollbar {
+  width: 10px;
+}
+
+.app-rail::-webkit-scrollbar-thumb,
+.content-column::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.14);
+  background-clip: padding-box;
+}
+
+.app-rail::-webkit-scrollbar-track,
+.content-column::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .rail-brand {
-  padding-bottom: 1.5rem;
+  padding: 0.35rem 0 1.75rem;
   border-bottom: 1px solid var(--border);
 }
 
 .rail-brand__title {
-  margin: 0.45rem 0 0.55rem;
-  font-size: clamp(1.95rem, 4vw, 2.6rem);
-  line-height: 1.02;
+  margin: 0.5rem 0 0.7rem;
+  font-size: clamp(2.1rem, 4vw, 3rem);
+  line-height: 0.98;
   letter-spacing: -0.06em;
-  font-weight: 700;
+  font-weight: 760;
   color: var(--ink);
 }
 
 .rail-brand__body {
   margin: 0;
   color: var(--ink-soft);
-  font-size: 0.95rem;
-  line-height: 1.62;
+  font-size: 0.96rem;
+  line-height: 1.68;
 }
 
 .rail-section {
@@ -261,45 +301,58 @@ button:disabled {
   justify-content: flex-start;
 }
 
+.rail-session {
+  margin-top: auto;
+  padding-bottom: 0.25rem;
+  border-bottom: none;
+  position: sticky;
+  bottom: 0;
+  background: linear-gradient(180deg, rgba(247, 244, 239, 0.28) 0%, rgba(247, 244, 239, 0.94) 24%, #f7f4ef 100%);
+  backdrop-filter: blur(12px);
+}
+
+.rail-session .rail-actions {
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--border);
+}
+
 .form-surface {
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
   margin-top: 0.15rem;
-  padding: 1rem;
-  border: 1px solid var(--border-strong);
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.62);
-  box-shadow: var(--ambient-shadow);
-}
-
-.content-column {
-  min-width: 0;
+  padding: 1.1rem;
+  border: 1px solid rgba(17, 24, 39, 0.08);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.35),
+    0 12px 30px rgba(15, 23, 42, 0.05);
 }
 
 .hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.35fr) minmax(250px, 0.8fr);
-  gap: clamp(1.5rem, 4vw, 3rem);
-  padding: 0.4rem 0 1.8rem;
+  grid-template-columns: minmax(0, 1.45fr) minmax(250px, 0.78fr);
+  gap: clamp(1.5rem, 4vw, 3.5rem);
+  padding: 0.35rem 0 2.2rem;
   border-bottom: 1px solid var(--border);
 }
 
 .hero h1 {
-  max-width: 10ch;
-  margin: 0.35rem 0 0.8rem;
-  font-size: clamp(3.4rem, 8vw, 5.8rem);
-  line-height: 0.92;
+  max-width: 11ch;
+  margin: 0.4rem 0 0.85rem;
+  font-size: clamp(3.6rem, 8vw, 6rem);
+  line-height: 0.9;
   letter-spacing: -0.08em;
-  font-weight: 750;
+  font-weight: 780;
   color: var(--ink);
 }
 
 .hero__copy > p:not(.eyebrow) {
-  max-width: 60ch;
+  max-width: 56ch;
   margin: 0;
-  font-size: 1rem;
-  line-height: 1.7;
+  font-size: 1.02rem;
+  line-height: 1.74;
   color: var(--ink-soft);
 }
 
@@ -307,7 +360,8 @@ button:disabled {
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
-  padding-top: 0.85rem;
+  padding: 1rem 0 0 1.1rem;
+  border-left: 1px solid var(--border);
 }
 
 .hero-detail-list {
@@ -334,7 +388,7 @@ button:disabled {
 
 .hero-detail strong {
   font-size: 1rem;
-  font-weight: 650;
+  font-weight: 680;
   color: var(--ink);
   text-align: right;
 }
@@ -395,7 +449,7 @@ button:disabled {
 .content-stack {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1.25rem;
   padding-top: 1.5rem;
 }
 
@@ -407,11 +461,14 @@ button:disabled {
 .module-card {
   position: relative;
   overflow: hidden;
-  padding: 1.5rem 1.5rem 1.35rem;
-  border: 1px solid var(--border);
-  border-radius: 24px;
-  background: var(--surface);
-  box-shadow: var(--ambient-shadow);
+  padding: 1.75rem 1.75rem 1.55rem;
+  border: 1px solid rgba(17, 24, 39, 0.07);
+  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.68);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.42),
+    0 10px 26px rgba(15, 23, 42, 0.04),
+    0 32px 72px rgba(15, 23, 42, 0.04);
   backdrop-filter: blur(14px);
 }
 
@@ -419,8 +476,8 @@ button:disabled {
   content: "";
   position: absolute;
   inset: 0 0 auto 0;
-  height: 2px;
-  background: linear-gradient(90deg, var(--card-accent, var(--accent)), transparent 56%);
+  height: 1px;
+  background: linear-gradient(90deg, var(--card-accent, var(--accent)), transparent 58%);
 }
 
 .module-card__header {
@@ -605,6 +662,19 @@ button:disabled {
   color: var(--ink-soft);
 }
 
+.user-row__details {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+  text-align: right;
+}
+
+.user-row__details small {
+  color: var(--ink-faint);
+  font-size: 0.82rem;
+}
+
 .timeline ul {
   margin: 0.7rem 0 0;
   padding-left: 1rem;
@@ -678,6 +748,12 @@ button:disabled {
   line-height: 1.6;
 }
 
+@media (min-width: 1101px) {
+  body {
+    overflow: hidden;
+  }
+}
+
 .surface-row,
 .feature-row,
 .metric,
@@ -690,16 +766,31 @@ button:disabled {
 
 @media (max-width: 1100px) {
   .app-layout {
+    height: auto;
+    min-height: 0;
     grid-template-columns: 1fr;
   }
 
-  .app-rail {
-    position: static;
+  .app-rail,
+  .content-column {
+    overflow: visible;
+    padding-right: 0;
   }
 
   .hero,
   .admin-grid {
     grid-template-columns: 1fr;
+  }
+
+  .hero__meta {
+    padding-left: 0;
+    border-left: none;
+  }
+
+  .rail-session {
+    position: static;
+    background: transparent;
+    backdrop-filter: none;
   }
 
   .hero h1 {

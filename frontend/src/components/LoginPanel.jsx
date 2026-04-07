@@ -12,7 +12,7 @@ export function LoginPanel({ onQuickLogin, onManualLogin, loading, error }) {
       <div className="rail-section__header">
         <p className="eyebrow">Access</p>
         <h2>Access Portal</h2>
-        <p>Use a demo role for speed, or sign in manually.</p>
+        <p>Use a seeded role for a fast walkthrough, or sign in manually.</p>
       </div>
       <div className="stack gap-md">
         <div className="stack gap-sm quick-login-list">

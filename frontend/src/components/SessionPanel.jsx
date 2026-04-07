@@ -5,11 +5,11 @@ export function SessionPanel({ session, onRefresh, onLogout, busy, showAdminWork
   const isAdmin = session.user.role === "admin";
 
   return (
-    <section className="rail-section rail-section--spacious">
+    <section className="rail-section rail-section--spacious rail-session">
       <div className="rail-section__header">
-        <p className="eyebrow">Workspace</p>
+        <p className="eyebrow">Session</p>
         <h2>{session.user.name}</h2>
-        <p>{titleCase(session.user.role)} session</p>
+        <p>{titleCase(session.user.role)} access is active.</p>
       </div>
 
       <div className="rail-list">
@@ -22,9 +22,15 @@ export function SessionPanel({ session, onRefresh, onLogout, busy, showAdminWork
           <strong>{session.user.email}</strong>
         </div>
         <div className="rail-list__row">
-          <span>Department</span>
+          <span>Team</span>
           <strong>{session.user.department}</strong>
         </div>
+        {session.user.specialty ? (
+          <div className="rail-list__row">
+            <span>Specialty</span>
+            <strong>{session.user.specialty}</strong>
+          </div>
+        ) : null}
       </div>
 
       <div className="rail-actions">

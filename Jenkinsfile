@@ -6,6 +6,7 @@ pipeline {
     BACKEND_IMAGE = "${env.BACKEND_IMAGE ?: 'incidentflow-plus-backend'}"
     FRONTEND_IMAGE = "${env.FRONTEND_IMAGE ?: 'incidentflow-plus-frontend'}"
     COVERAGE_TARGET = "75"
+    DOCKER_READY = "false"
   }
 
   triggers {
@@ -52,7 +53,46 @@ pipeline {
       }
     }
 
+    stage('Build Frontend Bundle') {
+      steps {
+        script {
+          if (isUnix()) {
+            sh 'cd frontend && npm run build'
+          } else {
+            bat 'cd frontend && npm run build'
+          }
+        }
+      }
+    }
+
+    stage('Check Docker Daemon') {
+      steps {
+        script {
+          def dockerStatus
+
+          if (isUnix()) {
+            dockerStatus = sh(script: 'docker info >/dev/null 2>&1', returnStatus: true)
+          } else {
+            dockerStatus = bat(script: '@echo off\r\ndocker info >NUL 2>&1', returnStatus: true)
+          }
+
+          env.DOCKER_READY = dockerStatus == 0 ? 'true' : 'false'
+
+          if (env.DOCKER_READY == 'true') {
+            echo 'Docker daemon detected on the Jenkins agent. Image stages are enabled.'
+          } else {
+            echo 'Docker daemon is not available on this Jenkins agent. Skipping image build and push stages.'
+          }
+        }
+      }
+    }
+
     stage('Build Images') {
+      when {
+        expression {
+          env.DOCKER_READY == 'true'
+        }
+      }
       steps {
         script {
           if (isUnix()) {
@@ -67,6 +107,11 @@ pipeline {
     }
 
     stage('Push Images') {
+      when {
+        expression {
+          env.DOCKER_READY == 'true'
+        }
+      }
       steps {
         withCredentials([usernamePassword(credentialsId: 'docker-registry-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
           script {
@@ -86,7 +131,13 @@ pipeline {
 
     stage('Feedback') {
       steps {
-        echo 'GREEN TICK'
+        script {
+          if (env.DOCKER_READY == 'true') {
+            echo 'GREEN TICK'
+          } else {
+            echo 'GREEN TICK - test and build stages passed; Docker publish stages were skipped because the agent has no Docker daemon.'
+          }
+        }
       }
     }
   }

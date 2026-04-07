@@ -19,7 +19,7 @@ describe("API integration", () => {
 
     const studentToken = await loginAndGetToken(app, "asha@student.local");
     const adminToken = await loginAndGetToken(app, "admin@incidentflow.local");
-    const technicianToken = await loginAndGetToken(app, "tech@incidentflow.local");
+    const technicianToken = await loginAndGetToken(app, "aditya@incidentflow.local");
 
     const createdIncident = await request(app)
       .post("/api/incidents")
@@ -36,7 +36,7 @@ describe("API integration", () => {
     const usersResponse = await request(app)
       .get("/api/admin/users")
       .set("Authorization", `Bearer ${adminToken}`);
-    const technician = usersResponse.body.users.find((user) => user.role === "technician");
+    const technician = usersResponse.body.users.find((user) => user.email === "aditya@incidentflow.local");
 
     const assigned = await request(app)
       .patch(`/api/incidents/${createdIncident.body.incident._id}/assign`)

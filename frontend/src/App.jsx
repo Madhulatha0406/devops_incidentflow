@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { apiRequest } from "./api/client";
 import { AdminPanel } from "./components/AdminPanel";
-import { HealthPanel } from "./components/HealthPanel";
 import { IncidentPanel } from "./components/IncidentPanel";
 import { LoginPanel } from "./components/LoginPanel";
 import { SessionPanel } from "./components/SessionPanel";
@@ -56,16 +55,17 @@ export default function App() {
 
   const role = session?.user?.role;
   const technicians = users.filter((user) => user.role === "technician");
+  const specialistCount = technicians.length || 5;
   const headline = role
     ? `Signed in as ${titleCase(role)}. ${roleDescriptions[role]}`
-    : "A calmer campus service desk with SLA-aware workflows, live health visibility, and role-based access.";
+    : "A quieter service desk for campus operations, with student-only intake, specialist routing, and SLA-aware follow-through.";
   const workspaceFocus = role
     ? {
         student: "Student intake",
         technician: "Technician execution",
         admin: "Administrative control"
       }[role]
-    : "Demo role entry";
+    : "Demo access";
 
   const showSuccess = (message) => {
     setStatusMessage(message);
@@ -274,13 +274,12 @@ export default function App() {
         <aside className="app-rail">
           <div className="rail-brand">
             <p className="eyebrow">IncidentFlow</p>
-            <h2 className="rail-brand__title">SLA-based campus service management.</h2>
+            <h2 className="rail-brand__title">Campus operations, stripped back to what matters.</h2>
             <p className="rail-brand__body">
-              A quieter operational rail for access, health, and role context so the main workspace can stay focused.
+              A compact left rail for access and session controls, with the working surface kept open for triage, assignment, and closure.
             </p>
           </div>
 
-          <HealthPanel health={health} />
           {!session ? (
             <LoginPanel
               onQuickLogin={(roleName) => startSession(demoCredentials[roleName])}
@@ -303,31 +302,31 @@ export default function App() {
         <div className="content-column">
           <header className="hero">
             <div className="hero__copy">
-              <p className="eyebrow">Campus Service Operations</p>
-              <h1>Operate the service desk without the dashboard noise.</h1>
+              <p className="eyebrow">Campus Service Desk</p>
+              <h1>One calm desk for intake, routing, and resolution.</h1>
               <p>{headline}</p>
               <div className="hero__actions">
-                <span className="hero-tag">Dockerized deployment</span>
-                <span className="hero-tag">Jenkins CI</span>
-                <span className="hero-tag">JWT role access</span>
-                <span className="hero-tag">Health monitored</span>
+                <span className="hero-tag">Student-only reporting</span>
+                <span className="hero-tag">Specialist technician routing</span>
+                <span className="hero-tag">SLA breach escalation</span>
+                <span className="hero-tag">CI-verified delivery</span>
               </div>
             </div>
 
             <div className="hero__meta">
-              <p className="eyebrow">Operational Focus</p>
+              <p className="eyebrow">Desk Snapshot</p>
               <div className="hero-detail-list">
                 <div className="hero-detail">
-                  <span>Primary mode</span>
+                  <span>Current lens</span>
                   <strong>{workspaceFocus}</strong>
                 </div>
                 <div className="hero-detail">
-                  <span>System status</span>
-                  <strong>{health?.status || "Waiting"}</strong>
+                  <span>Specialist bench</span>
+                  <strong>{specialistCount} technicians</strong>
                 </div>
                 <div className="hero-detail">
-                  <span>Active deployment</span>
-                  <strong>{health?.activeColor || "Pending"}</strong>
+                  <span>Escalation model</span>
+                  <strong>Deadline breach plus admin follow-through</strong>
                 </div>
               </div>
             </div>

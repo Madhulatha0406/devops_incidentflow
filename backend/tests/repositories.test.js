@@ -12,7 +12,7 @@ describe("repositories", () => {
   test("memory repositories filter incidents and persist buses", async () => {
     const repositories = createMemoryRepositories({ defaultUsers });
     const student = await repositories.users.findByEmail("student@incidentflow.local");
-    const technician = await repositories.users.findByEmail("tech@incidentflow.local");
+    const technician = await repositories.users.findByEmail("aditya@incidentflow.local");
 
     const created = await repositories.incidents.create({
       title: "Lab PC broken",

@@ -11,12 +11,15 @@ export function AdminPanel({
   onRunEscalations,
   actionBusy
 }) {
+  const technicianRoster = users.filter((user) => user.role === "technician");
+  const supportingUsers = users.filter((user) => user.role !== "technician");
   const [form, setForm] = useState({
     name: "",
     email: "",
     password: "",
     role: "technician",
-    department: "Campus Services"
+    department: "Campus Services",
+    specialty: "Electrician"
   });
 
   if (!session || session.user.role !== "admin") {
@@ -76,11 +79,18 @@ export function AdminPanel({
                 <option value="admin">Admin</option>
               </select>
             </div>
-            <input
-              placeholder="Department"
-              value={form.department}
-              onChange={(event) => setForm((current) => ({ ...current, department: event.target.value }))}
-            />
+            <div className="grid grid-2">
+              <input
+                placeholder="Team or department"
+                value={form.department}
+                onChange={(event) => setForm((current) => ({ ...current, department: event.target.value }))}
+              />
+              <input
+                placeholder="Specialty"
+                value={form.specialty}
+                onChange={(event) => setForm((current) => ({ ...current, specialty: event.target.value }))}
+              />
+            </div>
             <button
               className="primary-button"
               disabled={actionBusy}
@@ -91,7 +101,8 @@ export function AdminPanel({
                   email: "",
                   password: "",
                   role: "technician",
-                  department: "Campus Services"
+                  department: "Campus Services",
+                  specialty: "Electrician"
                 });
               }}
             >
@@ -100,20 +111,40 @@ export function AdminPanel({
           </div>
 
           <div className="admin-section">
-            <h3>User directory</h3>
+            <h3>Technician bench</h3>
             <div className="stack directory-list">
-              {users.map((user) => (
-                <article key={user._id} className="user-row">
+              {technicianRoster.map((user) => (
+                <article key={user._id} className="user-row user-row--technician">
                   <div>
                     <strong>{user.name}</strong>
-                    <p>
-                      {user.email} | {titleCase(user.role)}
-                    </p>
+                    <p>{user.email}</p>
                   </div>
-                  <span>{user.department}</span>
+                  <div className="user-row__details">
+                    <span className="session-pill">{user.specialty || "Generalist"}</span>
+                    <small>{user.department}</small>
+                  </div>
                 </article>
               ))}
             </div>
+
+            {supportingUsers.length > 0 ? (
+              <div className="stack gap-sm">
+                <h3>Support directory</h3>
+                <div className="stack directory-list">
+                  {supportingUsers.map((user) => (
+                    <article key={user._id} className="user-row">
+                      <div>
+                        <strong>{user.name}</strong>
+                        <p>
+                          {user.email} | {titleCase(user.role)}
+                        </p>
+                      </div>
+                      <span>{user.department}</span>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
       </div>

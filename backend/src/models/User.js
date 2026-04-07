@@ -24,6 +24,10 @@ const userSchema = new mongoose.Schema(
     department: {
       type: String,
       default: "Campus Services"
+    },
+    specialty: {
+      type: String,
+      default: ""
     }
   },
   {

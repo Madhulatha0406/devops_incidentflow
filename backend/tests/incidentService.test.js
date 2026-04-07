@@ -38,7 +38,7 @@ describe("incidentService", () => {
 
     const student = await repositories.users.findByEmail("student@incidentflow.local");
     const admin = await repositories.users.findByEmail("admin@incidentflow.local");
-    const technician = await repositories.users.findByEmail("tech@incidentflow.local");
+    const technician = await repositories.users.findByEmail("aditya@incidentflow.local");
 
     const incident = await incidentService.reportIncident(
       {

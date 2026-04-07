@@ -26,7 +26,8 @@ describe("authService", () => {
       name: "New Tech",
       email: "new.tech@example.com",
       password: "Password123!",
-      role: "technician"
+      role: "technician",
+      specialty: "Electrician"
     });
     const login = await authService.login({
       email: "new.tech@example.com",
@@ -34,6 +35,7 @@ describe("authService", () => {
     });
 
     expect(newUser.role).toBe("technician");
+    expect(newUser.specialty).toBe("Electrician");
     expect(login.token).toBeTruthy();
     expect(login.user.email).toBe("new.tech@example.com");
   });

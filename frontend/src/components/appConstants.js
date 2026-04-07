@@ -1,6 +1,6 @@
 const demoCredentials = {
   student: { email: "student@incidentflow.local", password: "Password123!" },
-  technician: { email: "tech@incidentflow.local", password: "Password123!" },
+  technician: { email: "aditya@incidentflow.local", password: "Password123!" },
   admin: { email: "admin@incidentflow.local", password: "Password123!" }
 };
 

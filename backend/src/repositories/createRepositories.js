@@ -31,6 +31,7 @@ const seedMemoryUsers = (defaultUsers) =>
     passwordHash: bcrypt.hashSync(user.password, 10),
     role: user.role,
     department: user.department || "Campus Services",
+    specialty: user.specialty || "",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   }));
@@ -110,7 +111,8 @@ const createMongoRepositories = () => ({
             email: user.email.toLowerCase(),
             passwordHash: bcrypt.hashSync(user.password, 10),
             role: user.role,
-            department: user.department || "Campus Services"
+            department: user.department || "Campus Services",
+            specialty: user.specialty || ""
           });
         }
       }

@@ -7,6 +7,10 @@ function IncidentRow({ incident, role, currentUserId, technicians, onAssign, onU
   const [status, setStatus] = useState(incident.status);
   const [resolutionSummary, setResolutionSummary] = useState(incident.resolutionSummary || "");
   const isAssignedTechnician = role === "technician" && incident.technicianId === currentUserId;
+  const assignedTechnician = technicians.find((technician) => technician._id === incident.technicianId);
+  const assignedTechnicianLabel = assignedTechnician
+    ? `${assignedTechnician.name}${assignedTechnician.specialty ? ` • ${assignedTechnician.specialty}` : ""}`
+    : incident.technicianId || "Unassigned";
 
   useEffect(() => {
     setTechnicianId(incident.technicianId || "");
@@ -33,19 +37,20 @@ function IncidentRow({ incident, role, currentUserId, technicians, onAssign, onU
 
       <div className="incident-meta">
         <span>SLA due: {formatDateTime(incident.slaDueAt)}</span>
-        <span>Technician ID: {incident.technicianId || "Unassigned"}</span>
+        <span>Assigned specialist: {assignedTechnicianLabel}</span>
         <span>Escalation level: {incident.escalationLevel || 0}</span>
       </div>
 
       {role === "admin" && technicians.length > 0 ? (
         <div className="stack gap-sm admin-action-box">
-          <strong>Assign technician</strong>
+          <strong>Assign specialist</strong>
           <div className="grid grid-2">
             <select value={technicianId} onChange={(event) => setTechnicianId(event.target.value)}>
               <option value="">Choose technician</option>
               {technicians.map((technician) => (
                 <option key={technician._id} value={technician._id}>
                   {technician.name}
+                  {technician.specialty ? ` • ${technician.specialty}` : ""}
                 </option>
               ))}
             </select>
@@ -134,7 +139,7 @@ export function IncidentPanel({ session, featureEnabled, incidents, technicians,
   const canCreate = session.user.role === "student";
   const subtitle = canCreate
     ? "Report issues, track SLA deadlines, and move tickets from assignment to final approval."
-    : "Review assigned or managed incidents, track SLA deadlines, and update ticket progress.";
+    : "Review assigned or managed incidents, route them to the right specialist, and update ticket progress.";
 
   return (
     <ModuleCard title="Incident Desk" subtitle={subtitle}>

@@ -7,11 +7,44 @@ const defaultUsers = [
     department: "Operations"
   },
   {
-    name: "Priya Tech",
-    email: "tech@incidentflow.local",
+    name: "Aditya Sharma",
+    email: "aditya@incidentflow.local",
     password: "Password123!",
     role: "technician",
-    department: "IT Support"
+    department: "Campus Maintenance",
+    specialty: "Electrician"
+  },
+  {
+    name: "Deepika Nair",
+    email: "deepika@incidentflow.local",
+    password: "Password123!",
+    role: "technician",
+    department: "Campus Maintenance",
+    specialty: "Plumber"
+  },
+  {
+    name: "Alia Khan",
+    email: "alia@incidentflow.local",
+    password: "Password123!",
+    role: "technician",
+    department: "Digital Infrastructure",
+    specialty: "Network Specialist"
+  },
+  {
+    name: "Roshan Varma",
+    email: "roshan@incidentflow.local",
+    password: "Password123!",
+    role: "technician",
+    department: "Facilities",
+    specialty: "HVAC and Power Backup"
+  },
+  {
+    name: "Charan Reddy",
+    email: "charan@incidentflow.local",
+    password: "Password123!",
+    role: "technician",
+    department: "Academic Technology",
+    specialty: "Classroom AV"
   },
   {
     name: "Student Demo",

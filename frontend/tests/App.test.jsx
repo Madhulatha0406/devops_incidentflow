@@ -1,5 +1,5 @@
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import App from "../src/App";
 
 jest.mock("../src/api/client", () => ({
@@ -23,10 +23,11 @@ describe("App", () => {
     });
   });
 
-  test("renders the product headline and login card", () => {
+  test("renders the product headline and login card", async () => {
     render(<App />);
     expect(screen.getByText("IncidentFlow")).toBeInTheDocument();
-    expect(screen.getByText("Platform Status")).toBeInTheDocument();
     expect(screen.getByText("Access Portal")).toBeInTheDocument();
+    expect(screen.getByText("One calm desk for intake, routing, and resolution.")).toBeInTheDocument();
+    await waitFor(() => expect(global.fetch).toHaveBeenCalledWith("/health"));
   });
 });
