@@ -1,6 +1,9 @@
 const { AppError } = require("../utils/appError");
 const { buildEscalationState, calculateSlaDueAt, isBreached } = require("../utils/sla");
 
+const TECHNICIAN_ALLOWED_STATUSES = ["in_progress", "closed"];
+const ADMIN_FINAL_STATUSES = ["resolved", "completed"];
+
 const createActivityEntry = (actor, message, createdAt) => ({
   actorId: actor?._id || "system",
   actorRole: actor?.role || "system",
@@ -18,7 +21,7 @@ const createIncidentService = ({ repositories, slaHours, nowProvider = () => new
       category: payload.category || "General",
       priority,
       status: "open",
-      reporterId: reporter._id,
+      reporterId: String(reporter._id),
       technicianId: null,
       slaDueAt: calculateSlaDueAt(createdAt, priority, slaHours).toISOString(),
       escalated: false,
@@ -53,7 +56,7 @@ const createIncidentService = ({ repositories, slaHours, nowProvider = () => new
     }
 
     return repositories.incidents.update(incidentId, {
-      technicianId: technician._id,
+      technicianId: String(technician._id),
       status: incident.status === "open" ? "assigned" : incident.status,
       activityLog: [
         ...(incident.activityLog || []),
@@ -68,11 +71,26 @@ const createIncidentService = ({ repositories, slaHours, nowProvider = () => new
       throw new AppError("Incident not found", 404);
     }
 
-    if (actor.role === "technician" && incident.technicianId !== actor._id) {
+    if (actor.role === "technician" && String(incident.technicianId) !== String(actor._id)) {
       throw new AppError("Technician is not assigned to this incident", 403);
     }
 
     const nextStatus = updates.status || incident.status;
+
+    if (actor.role === "technician" && !TECHNICIAN_ALLOWED_STATUSES.includes(nextStatus)) {
+      throw new AppError("Technician can only move incidents to in progress or closed", 403);
+    }
+
+    if (actor.role === "admin") {
+      if (!ADMIN_FINAL_STATUSES.includes(nextStatus)) {
+        throw new AppError("Admin can only mark incidents as resolved or completed", 403);
+      }
+
+      if (incident.status !== "closed") {
+        throw new AppError("Admin can finalize incidents only after technician closure", 409);
+      }
+    }
+
     const activityMessage = `Status updated to ${nextStatus}`;
 
     return repositories.incidents.update(incidentId, {
@@ -135,5 +153,7 @@ const createIncidentService = ({ repositories, slaHours, nowProvider = () => new
 
 module.exports = {
   createIncidentService,
-  createActivityEntry
+  createActivityEntry,
+  ADMIN_FINAL_STATUSES,
+  TECHNICIAN_ALLOWED_STATUSES
 };

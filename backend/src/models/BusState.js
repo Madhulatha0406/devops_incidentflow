@@ -15,6 +15,10 @@ const busStateSchema = new mongoose.Schema(
     etaMinutes: Number,
     delayMinutes: Number,
     occupancy: Number,
+    direction: {
+      type: Number,
+      default: 1
+    },
     status: String,
     lastUpdated: Date
   },

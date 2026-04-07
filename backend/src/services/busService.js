@@ -29,20 +29,29 @@ const DEFAULT_BUSES = [
 
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
+const asNumber = (value, fallback) => (Number.isFinite(Number(value)) ? Number(value) : fallback);
+
 const advanceBus = (bus, now = new Date()) => {
-  const nextDirection = bus.lat > 12.978 || bus.lat < 12.965 ? bus.direction * -1 : bus.direction;
-  const nextDelay = clamp(bus.delayMinutes + (bus.busId.endsWith("1") ? 1 : -1), 0, 18);
+  const currentDirection = asNumber(bus.direction, 1) || 1;
+  const currentLat = asNumber(bus.lat, 12.9716);
+  const currentLng = asNumber(bus.lng, 77.5946);
+  const currentDelay = asNumber(bus.delayMinutes, 0);
+  const currentEta = asNumber(bus.etaMinutes, 12);
+  const currentSpeed = asNumber(bus.speedKph, 20);
+  const currentOccupancy = asNumber(bus.occupancy, 20);
+  const nextDirection = currentLat > 12.978 || currentLat < 12.965 ? currentDirection * -1 : currentDirection;
+  const nextDelay = clamp(currentDelay + (bus.busId.endsWith("1") ? 1 : -1), 0, 18);
   const status = nextDelay > 5 ? "delayed" : "on_time";
 
   return {
     ...bus,
     direction: nextDirection,
-    lat: Number((bus.lat + 0.0009 * nextDirection).toFixed(6)),
-    lng: Number((bus.lng + 0.0007 * nextDirection).toFixed(6)),
-    etaMinutes: clamp(bus.etaMinutes + (status === "delayed" ? 1 : -1), 2, 30),
-    speedKph: clamp(bus.speedKph + (status === "delayed" ? -2 : 1), 10, 35),
+    lat: Number((currentLat + 0.0009 * nextDirection).toFixed(6)),
+    lng: Number((currentLng + 0.0007 * nextDirection).toFixed(6)),
+    etaMinutes: clamp(currentEta + (status === "delayed" ? 1 : -1), 2, 30),
+    speedKph: clamp(currentSpeed + (status === "delayed" ? -2 : 1), 10, 35),
     delayMinutes: nextDelay,
-    occupancy: clamp(bus.occupancy + (nextDirection > 0 ? 2 : -1), 5, 45),
+    occupancy: clamp(currentOccupancy + (nextDirection > 0 ? 2 : -1), 5, 45),
     status,
     lastUpdated: now.toISOString()
   };
@@ -82,6 +91,7 @@ const createBusService = ({ repositories, nowProvider = () => new Date(), initia
 
 module.exports = {
   DEFAULT_BUSES,
+  asNumber,
   clamp,
   advanceBus,
   createBusService

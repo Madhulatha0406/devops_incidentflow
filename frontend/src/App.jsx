@@ -1,257 +1,114 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { ModuleCard } from "./components/ModuleCard";
+import React, { useEffect, useState } from "react";
 import { apiRequest } from "./api/client";
+import { AdminPanel } from "./components/AdminPanel";
+import { HealthPanel } from "./components/HealthPanel";
+import { IncidentPanel } from "./components/IncidentPanel";
+import { LoginPanel } from "./components/LoginPanel";
+import { SessionPanel } from "./components/SessionPanel";
+import { demoCredentials, roleDescriptions, titleCase } from "./components/appConstants";
 import "./styles.css";
 
-const demoCredentials = {
-  student: { email: "student@incidentflow.local", password: "Password123!" },
-  technician: { email: "tech@incidentflow.local", password: "Password123!" },
-  admin: { email: "admin@incidentflow.local", password: "Password123!" }
+const SESSION_STORAGE_KEY = "incidentflow-session";
+
+const saveSession = (session) => {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  if (!session) {
+    window.localStorage.removeItem(SESSION_STORAGE_KEY);
+    return;
+  }
+
+  window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
 };
 
-const formatModuleState = (enabled) => (enabled ? "Enabled" : "Disabled");
+const loadSavedSession = () => {
+  if (typeof window === "undefined") {
+    return null;
+  }
 
-function FeatureBadge({ enabled }) {
-  return <span className={`feature-badge ${enabled ? "enabled" : "disabled"}`}>{formatModuleState(enabled)}</span>;
-}
+  const stored = window.localStorage.getItem(SESSION_STORAGE_KEY);
 
-function LoginPanel({ onLogin, loading, error }) {
-  const [role, setRole] = useState("student");
+  if (!stored) {
+    return null;
+  }
 
-  return (
-    <ModuleCard title="Demo Access" subtitle="Choose a role to explore the campus operations workflow." accent="var(--sunset)">
-      <div className="stack gap-md">
-        <select value={role} onChange={(event) => setRole(event.target.value)}>
-          <option value="student">Student</option>
-          <option value="technician">Technician</option>
-          <option value="admin">Admin</option>
-        </select>
-        <button disabled={loading} onClick={() => onLogin(demoCredentials[role])}>
-          {loading ? "Signing in..." : `Login as ${role}`}
-        </button>
-        {error ? <p className="error-text">{error}</p> : null}
-      </div>
-    </ModuleCard>
-  );
-}
-
-function IncidentPanel({ incidents, onCreateIncident, userRole }) {
-  const [form, setForm] = useState({
-    title: "",
-    description: "",
-    category: "General",
-    priority: "medium"
-  });
-
-  const canCreate = userRole === "student" || userRole === "admin";
-
-  return (
-    <ModuleCard title="Incident Desk" subtitle="SLA-based issue lifecycle with technician assignment and escalation logic.">
-      {canCreate ? (
-        <div className="stack gap-sm">
-          <input
-            placeholder="Incident title"
-            value={form.title}
-            onChange={(event) => setForm({ ...form, title: event.target.value })}
-          />
-          <textarea
-            placeholder="Describe the issue"
-            rows="4"
-            value={form.description}
-            onChange={(event) => setForm({ ...form, description: event.target.value })}
-          />
-          <div className="grid grid-2">
-            <select value={form.category} onChange={(event) => setForm({ ...form, category: event.target.value })}>
-              <option>General</option>
-              <option>Classroom IT</option>
-              <option>Network</option>
-              <option>Transport</option>
-            </select>
-            <select value={form.priority} onChange={(event) => setForm({ ...form, priority: event.target.value })}>
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
-              <option value="critical">Critical</option>
-            </select>
-          </div>
-          <button
-            onClick={() => {
-              onCreateIncident(form);
-              setForm({ title: "", description: "", category: "General", priority: "medium" });
-            }}
-          >
-            Report incident
-          </button>
-        </div>
-      ) : null}
-
-      <div className="stack gap-sm list-space">
-        {incidents.map((incident) => (
-          <article key={incident._id} className="incident-item">
-            <div className="incident-item__top">
-              <strong>{incident.title}</strong>
-              <span className={`pill pill-${incident.status}`}>{incident.status}</span>
-            </div>
-            <p>{incident.description}</p>
-            <small>
-              Priority: {incident.priority} | SLA due: {new Date(incident.slaDueAt).toLocaleString()}
-            </small>
-          </article>
-        ))}
-      </div>
-    </ModuleCard>
-  );
-}
-
-function BusPanel({ buses, alerts }) {
-  return (
-    <ModuleCard title="Smart Bus Tracking" subtitle="Live mock GPS updates with delay alerts for campus shuttles." accent="var(--ocean)">
-      <div className="grid grid-2 list-space">
-        {buses.map((bus) => (
-          <article key={bus.busId} className="bus-card">
-            <strong>{bus.name}</strong>
-            <p>{bus.routeName}</p>
-            <small>
-              ETA {bus.etaMinutes} min | Delay {bus.delayMinutes} min | Occupancy {bus.occupancy}
-            </small>
-          </article>
-        ))}
-      </div>
-      <div className="stack gap-sm list-space">
-        {alerts.length === 0 ? <p className="muted">No delay alerts right now.</p> : null}
-        {alerts.map((alert) => (
-          <div key={alert.busId} className="alert-banner">
-            {alert.message}
-          </div>
-        ))}
-      </div>
-    </ModuleCard>
-  );
-}
-
-function AIPanel({ analysis, onAnalyze }) {
-  const [form, setForm] = useState({
-    question: "Explain the importance of failover in campus systems.",
-    answer: "",
-    rubric: "Include failover, redundancy, uptime, and monitoring."
-  });
-
-  return (
-    <ModuleCard title="AI Correction Coach" subtitle="Teacher support module for structured answer feedback and improvement suggestions." accent="var(--mint)">
-      <div className="stack gap-sm">
-        <textarea value={form.question} rows="2" onChange={(event) => setForm({ ...form, question: event.target.value })} />
-        <textarea
-          value={form.answer}
-          rows="5"
-          placeholder="Paste a student answer"
-          onChange={(event) => setForm({ ...form, answer: event.target.value })}
-        />
-        <textarea value={form.rubric} rows="3" onChange={(event) => setForm({ ...form, rubric: event.target.value })} />
-        <button onClick={() => onAnalyze(form)}>Analyze answer</button>
-      </div>
-
-      {analysis ? (
-        <div className="analysis-box">
-          <strong>
-            {analysis.verdict} | Score {analysis.score}
-          </strong>
-          <p>Coverage: {analysis.coverage}%</p>
-          <p>Strengths: {analysis.strengths.join(", ") || "Needs more rubric-aligned points."}</p>
-          <ul>
-            {analysis.suggestions.map((suggestion) => (
-              <li key={suggestion}>{suggestion}</li>
-            ))}
-          </ul>
-        </div>
-      ) : null}
-    </ModuleCard>
-  );
-}
-
-function AdminPanel({ dashboard, onToggleFeature }) {
-  const flags = dashboard?.featureFlags || {};
-
-  return (
-    <ModuleCard title="Admin Control Tower" subtitle="Operations view for SLA risk, staffing, and feature rollout control." accent="var(--rose)">
-      {dashboard ? (
-        <div className="stack gap-md">
-          <div className="grid grid-3">
-            <div className="metric">
-              <span>Total incidents</span>
-              <strong>{dashboard.incidents.total}</strong>
-            </div>
-            <div className="metric">
-              <span>SLA breached</span>
-              <strong>{dashboard.incidents.breached}</strong>
-            </div>
-            <div className="metric">
-              <span>Delayed buses</span>
-              <strong>{dashboard.buses.delayed}</strong>
-            </div>
-          </div>
-          <div className="stack gap-sm">
-            {Object.entries(flags).map(([name, enabled]) => (
-              <div key={name} className="feature-row">
-                <div>
-                  <strong>{name}</strong>
-                  <FeatureBadge enabled={enabled} />
-                </div>
-                <button onClick={() => onToggleFeature(name, !enabled)}>{enabled ? "Disable" : "Enable"}</button>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : (
-        <p className="muted">Admin analytics will appear after login.</p>
-      )}
-    </ModuleCard>
-  );
-}
+  try {
+    return JSON.parse(stored);
+  } catch (_error) {
+    window.localStorage.removeItem(SESSION_STORAGE_KEY);
+    return null;
+  }
+};
 
 export default function App() {
-  const [session, setSession] = useState(null);
+  const [session, setSession] = useState(loadSavedSession);
+  const [health, setHealth] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [actionBusy, setActionBusy] = useState(false);
   const [error, setError] = useState("");
+  const [statusMessage, setStatusMessage] = useState("");
   const [incidents, setIncidents] = useState([]);
-  const [buses, setBuses] = useState([]);
-  const [alerts, setAlerts] = useState([]);
-  const [analysis, setAnalysis] = useState(null);
   const [dashboard, setDashboard] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [showAdminWorkspace, setShowAdminWorkspace] = useState(false);
 
   const role = session?.user?.role;
-  const featureFlags = dashboard?.featureFlags || {
-    incidents: true,
-    busTracking: true,
-    aiCorrection: true
+  const technicians = users.filter((user) => user.role === "technician");
+  const headline = role
+    ? `Signed in as ${titleCase(role)}. ${roleDescriptions[role]}`
+    : "A calmer campus service desk with SLA-aware workflows, live health visibility, and role-based access.";
+  const workspaceFocus = role
+    ? {
+        student: "Student intake",
+        technician: "Technician execution",
+        admin: "Administrative control"
+      }[role]
+    : "Demo role entry";
+
+  const showSuccess = (message) => {
+    setStatusMessage(message);
+    setError("");
   };
 
-  const headline = useMemo(() => {
-    if (!role) {
-      return "Campus operations, transport intelligence, and AI-assisted evaluation in one platform.";
+  const loadHealth = async () => {
+    try {
+      const response = await fetch("/health");
+      const payload = await response.json();
+      setHealth(payload);
+    } catch (_error) {
+      setHealth(null);
     }
-
-    return `Signed in as ${role}. Monitor campus service delivery in real time.`;
-  }, [role]);
+  };
 
   const loadRoleData = async (token, nextRole) => {
-    const tasks = [apiRequest("/incidents", { token }).then((payload) => setIncidents(payload.incidents)).catch(() => setIncidents([]))];
+    const requests = [
+      apiRequest("/incidents", { token }),
+      nextRole === "admin" ? apiRequest("/admin/dashboard", { token }) : Promise.resolve(null),
+      nextRole === "admin" ? apiRequest("/admin/users", { token }) : Promise.resolve(null)
+    ];
 
-    tasks.push(apiRequest("/buses", { token }).then((payload) => {
-      setBuses(payload.buses);
-      setAlerts(payload.alerts);
-    }).catch(() => {
-      setBuses([]);
-      setAlerts([]);
-    }));
+    const [incidentsResult, dashboardResult, usersResult] = await Promise.allSettled(requests);
 
-    if (nextRole === "admin") {
-      tasks.push(apiRequest("/admin/dashboard", { token }).then((payload) => setDashboard(payload.dashboard)));
+    if (incidentsResult.status === "fulfilled") {
+      setIncidents(incidentsResult.value.incidents || []);
     }
 
-    await Promise.all(tasks);
+    if (dashboardResult.status === "fulfilled" && dashboardResult.value) {
+      setDashboard(dashboardResult.value.dashboard);
+    } else if (nextRole !== "admin") {
+      setDashboard(null);
+    }
+
+    if (usersResult.status === "fulfilled" && usersResult.value) {
+      setUsers(usersResult.value.users || []);
+    } else if (nextRole !== "admin") {
+      setUsers([]);
+    }
   };
 
-  const handleLogin = async (credentials) => {
+  const startSession = async (credentials) => {
     try {
       setLoading(true);
       setError("");
@@ -260,11 +117,59 @@ export default function App() {
         body: credentials
       });
       setSession(result);
-      await loadRoleData(result.token, result.user.role);
+      saveSession(result);
+      await Promise.all([loadRoleData(result.token, result.user.role), loadHealth()]);
+      showSuccess(`${titleCase(result.user.role)} login successful.`);
     } catch (requestError) {
       setError(requestError.message);
+      setStatusMessage("");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const refreshCurrentSession = async () => {
+    if (!session) {
+      await loadHealth();
+      return;
+    }
+
+    try {
+      setActionBusy(true);
+      await Promise.all([loadRoleData(session.token, session.user.role), loadHealth()]);
+      showSuccess("Dashboard refreshed successfully.");
+    } catch (requestError) {
+      setError(requestError.message);
+      setStatusMessage("");
+    } finally {
+      setActionBusy(false);
+    }
+  };
+
+  const handleLogout = () => {
+    saveSession(null);
+    setSession(null);
+    setIncidents([]);
+    setDashboard(null);
+    setUsers([]);
+    setShowAdminWorkspace(false);
+    setError("");
+    showSuccess("Session cleared.");
+  };
+
+  const runWithBusyState = async (message, action) => {
+    try {
+      setActionBusy(true);
+      setError("");
+      await action();
+      if (message) {
+        showSuccess(message);
+      }
+    } catch (requestError) {
+      setError(requestError.message);
+      setStatusMessage("");
+    } finally {
+      setActionBusy(false);
     }
   };
 
@@ -273,50 +178,91 @@ export default function App() {
       return;
     }
 
-    await apiRequest("/incidents", {
-      method: "POST",
-      token: session.token,
-      body: form
+    await runWithBusyState("Incident reported successfully.", async () => {
+      await apiRequest("/incidents", {
+        method: "POST",
+        token: session.token,
+        body: form
+      });
+      await loadRoleData(session.token, session.user.role);
     });
-    await loadRoleData(session.token, session.user.role);
   };
 
-  const handleAnalyze = async (form) => {
+  const handleAssignIncident = async (incidentId, technicianId) => {
     if (!session) {
       return;
     }
 
-    const result = await apiRequest("/ai/correct", {
-      method: "POST",
-      token: session.token,
-      body: form
+    await runWithBusyState("Technician assigned successfully.", async () => {
+      await apiRequest(`/incidents/${incidentId}/assign`, {
+        method: "PATCH",
+        token: session.token,
+        body: { technicianId }
+      });
+      await loadRoleData(session.token, session.user.role);
     });
-    setAnalysis(result.analysis);
   };
 
-  const handleToggleFeature = async (name, enabled) => {
+  const handleUpdateIncidentStatus = async (incidentId, status, resolutionSummary) => {
     if (!session) {
       return;
     }
 
-    await apiRequest(`/admin/feature-flags/${name}`, {
-      method: "PATCH",
-      token: session.token,
-      body: { enabled }
+    await runWithBusyState("Incident updated successfully.", async () => {
+      await apiRequest(`/incidents/${incidentId}/status`, {
+        method: "PATCH",
+        token: session.token,
+        body: { status, resolutionSummary }
+      });
+      await loadRoleData(session.token, session.user.role);
     });
-    const refreshed = await apiRequest("/admin/dashboard", {
-      token: session.token
-    });
-    setDashboard(refreshed.dashboard);
   };
+
+  const handleCreateUser = async (form) => {
+    if (!session) {
+      return;
+    }
+
+    await runWithBusyState("User created successfully.", async () => {
+      await apiRequest("/admin/users", {
+        method: "POST",
+        token: session.token,
+        body: form
+      });
+      await loadRoleData(session.token, session.user.role);
+    });
+  };
+
+  const handleRunEscalations = async () => {
+    if (!session) {
+      return;
+    }
+
+    await runWithBusyState("Escalation scan completed.", async () => {
+      await apiRequest("/admin/escalations/run", {
+        method: "POST",
+        token: session.token
+      });
+      await loadRoleData(session.token, session.user.role);
+    });
+  };
+
+  useEffect(() => {
+    loadHealth().catch(() => undefined);
+  }, []);
 
   useEffect(() => {
     if (!session) {
       return undefined;
     }
 
+    loadRoleData(session.token, session.user.role).catch((requestError) => {
+      setError(requestError.message);
+    });
+
     const intervalId = setInterval(() => {
       loadRoleData(session.token, session.user.role).catch(() => undefined);
+      loadHealth().catch(() => undefined);
     }, 8000);
 
     return () => clearInterval(intervalId);
@@ -324,36 +270,100 @@ export default function App() {
 
   return (
     <div className="app-shell">
-      <header className="hero">
-        <div className="hero__copy">
-          <p className="eyebrow">IncidentFlow+</p>
-          <h1>SLA-led campus support with live shuttle intelligence.</h1>
-          <p>{headline}</p>
-        </div>
-        <div className="hero__flags">
-          <div>
-            <span>Incident module</span>
-            <FeatureBadge enabled={featureFlags.incidents} />
+      <div className="app-layout">
+        <aside className="app-rail">
+          <div className="rail-brand">
+            <p className="eyebrow">IncidentFlow</p>
+            <h2 className="rail-brand__title">SLA-based campus service management.</h2>
+            <p className="rail-brand__body">
+              A quieter operational rail for access, health, and role context so the main workspace can stay focused.
+            </p>
           </div>
-          <div>
-            <span>Bus module</span>
-            <FeatureBadge enabled={featureFlags.busTracking} />
-          </div>
-          <div>
-            <span>AI correction</span>
-            <FeatureBadge enabled={featureFlags.aiCorrection} />
-          </div>
-        </div>
-      </header>
 
-      {!session ? <LoginPanel onLogin={handleLogin} loading={loading} error={error} /> : null}
+          <HealthPanel health={health} />
+          {!session ? (
+            <LoginPanel
+              onQuickLogin={(roleName) => startSession(demoCredentials[roleName])}
+              onManualLogin={startSession}
+              loading={loading}
+              error={error}
+            />
+          ) : (
+            <SessionPanel
+              session={session}
+              onRefresh={refreshCurrentSession}
+              onLogout={handleLogout}
+              busy={actionBusy}
+              showAdminWorkspace={showAdminWorkspace}
+              onToggleAdminWorkspace={() => setShowAdminWorkspace((current) => !current)}
+            />
+          )}
+        </aside>
 
-      <main className="dashboard-grid">
-        <IncidentPanel incidents={incidents} onCreateIncident={handleCreateIncident} userRole={role} />
-        <BusPanel buses={buses} alerts={alerts} />
-        <AIPanel analysis={analysis} onAnalyze={handleAnalyze} />
-        <AdminPanel dashboard={dashboard} onToggleFeature={handleToggleFeature} />
-      </main>
+        <div className="content-column">
+          <header className="hero">
+            <div className="hero__copy">
+              <p className="eyebrow">Campus Service Operations</p>
+              <h1>Operate the service desk without the dashboard noise.</h1>
+              <p>{headline}</p>
+              <div className="hero__actions">
+                <span className="hero-tag">Dockerized deployment</span>
+                <span className="hero-tag">Jenkins CI</span>
+                <span className="hero-tag">JWT role access</span>
+                <span className="hero-tag">Health monitored</span>
+              </div>
+            </div>
+
+            <div className="hero__meta">
+              <p className="eyebrow">Operational Focus</p>
+              <div className="hero-detail-list">
+                <div className="hero-detail">
+                  <span>Primary mode</span>
+                  <strong>{workspaceFocus}</strong>
+                </div>
+                <div className="hero-detail">
+                  <span>System status</span>
+                  <strong>{health?.status || "Waiting"}</strong>
+                </div>
+                <div className="hero-detail">
+                  <span>Active deployment</span>
+                  <strong>{health?.activeColor || "Pending"}</strong>
+                </div>
+              </div>
+            </div>
+          </header>
+
+          {statusMessage ? <div className="status-banner success-banner">{statusMessage}</div> : null}
+          {error ? <div className="status-banner error-banner">{error}</div> : null}
+
+          <main className="content-stack">
+            <IncidentPanel
+              session={session}
+              featureEnabled={health?.featureFlags?.incidents ?? true}
+              incidents={incidents}
+              technicians={technicians}
+              onCreateIncident={handleCreateIncident}
+              onAssign={handleAssignIncident}
+              onUpdateStatus={handleUpdateIncidentStatus}
+              actionBusy={actionBusy}
+            />
+
+            {showAdminWorkspace ? (
+              <section className="admin-workspace-grid">
+                <AdminPanel
+                  session={session}
+                  dashboard={dashboard}
+                  users={users}
+                  onCreateUser={handleCreateUser}
+                  onRefreshAdmin={refreshCurrentSession}
+                  onRunEscalations={handleRunEscalations}
+                  actionBusy={actionBusy}
+                />
+              </section>
+            ) : null}
+          </main>
+        </div>
+      </div>
     </div>
   );
 }

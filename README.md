@@ -1,12 +1,16 @@
-# IncidentFlow+
+# IncidentFlow – SLA-Based IT Service Management System
 
-IncidentFlow+ is a production-ready MERN-style campus operations platform that combines three practical modules in one system:
+IncidentFlow is a production-ready MERN-style campus operations platform that combines three practical modules in one system:
 
 - SLA-based IT incident management with escalation logic
 - Smart campus bus tracking with live mock GPS updates and delay alerts
 - AI-based answer correction suggestions for teachers
 
-The project is structured for DevOps evaluation with Docker, Docker Compose, Jenkins CI, feature toggles, health checks, logging, and blue-green deployment support.
+The project is structured for DevOps evaluation with Docker, Docker Compose, Jenkins CI, GitHub Actions CI, feature toggles, health checks, logging, and blue-green deployment support.
+
+## Project Description
+
+IncidentFlow is a containerized web application for managing infrastructure-related issues within a college campus. Students report problems, administrators assign technicians, and technicians resolve incidents within predefined SLA time limits. The platform also includes bus tracking simulation, AI-based answer correction support, automated testing, CI/CD, and runtime monitoring to reflect a real DevOps workflow.
 
 ## Architecture
 
@@ -15,8 +19,69 @@ The project is structured for DevOps evaluation with Docker, Docker Compose, Jen
 - Database: MongoDB with Mongoose models
 - Authentication: JWT-based role access control
 - Testing: Jest + Supertest
-- CI/CD: Jenkins pipeline with Docker image build/push and coverage gate
+- CI/CD: Jenkins pipeline plus GitHub Actions verification workflow
 - Deployment: Docker Compose with blue-green proxy switching
+
+## Objective
+
+The main objective of this project is to demonstrate a complete DevOps lifecycle for a containerized MERN application:
+
+- Implement role-based workflow for Student, Technician, and Admin
+- Maintain automated test coverage above the 70-75% target
+- Automate build, test, and delivery workflows
+- Run services in isolated Docker containers
+- Expose monitoring and operational visibility through logs and `/health`
+
+## Presentation Guide
+
+### Docker
+
+- Docker is used to package the backend and frontend into reproducible containers.
+- This removes machine-specific setup issues and ensures the same runtime behavior across development, testing, and deployment.
+
+### Docker Compose
+
+- Docker Compose orchestrates the complete stack: MongoDB, blue backend, green backend, blue frontend, green frontend, and reverse proxy.
+- It also simulates blue-green deployment by keeping two colors available and allowing traffic switching through environment-driven proxy routing.
+
+### Jenkins
+
+- Jenkins is the implemented CI engine for this project.
+- On every code change it installs dependencies, runs tests, checks coverage, builds Docker images, and pushes them to Docker Hub.
+- The pipeline prints `GREEN TICK` when the full CI flow succeeds.
+
+### GitHub Actions
+
+- GitHub Actions now provides repository-native CI on push and pull request.
+- The workflow installs dependencies, runs backend coverage tests, runs frontend tests, builds the frontend, and uploads coverage artifacts.
+- If `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` are configured as GitHub Secrets, it also builds and pushes backend and frontend images.
+
+### Testing and Coverage
+
+- Jest is used for unit testing.
+- Supertest is used for backend API integration testing.
+- The backend coverage gate stays above the required threshold, which proves the critical logic is verified automatically before deployment.
+
+### Monitoring and Logging
+
+- The `/health` endpoint exposes runtime status, active deployment color, database mode, and feature toggle state.
+- Request logging and error logging provide operational visibility for debugging and monitoring.
+
+### Security and Secrets
+
+- JWT secures authenticated role-based access.
+- Environment variables store secrets and deployment configuration.
+- No secrets are hardcoded in the application source.
+
+### Feature Toggles
+
+- Runtime feature flags let the admin enable or disable incidents, bus tracking, and AI correction without changing code.
+- This demonstrates controlled rollout and operational flexibility.
+
+### Ansible and GitHub Actions
+
+- Ansible is not used in this implementation.
+- GitHub is used as the source repository, GitHub Actions provides repo-native CI, and Jenkins remains the richer pipeline for image delivery and deployment automation.
 
 ## Roles
 
@@ -192,9 +257,9 @@ npm run test:ci
 
 ## Verified Results
 
-- Backend tests: 49 passed
-- Frontend tests: 3 passed
-- Backend coverage: 95.70% statements, 79.06% branches, 94.51% functions, 95.73% lines
+- Backend tests: 52 passed
+- Frontend tests: 5 passed
+- Backend coverage: above 95% statements and above 78% branches
 - CI feedback condition: passes and prints `GREEN TICK` in Jenkins
 
 ## Docker and Compose
@@ -276,6 +341,24 @@ The deployment flow is:
   - `BACKEND_IMAGE`
   - `FRONTEND_IMAGE`
 
+## GitHub Actions CI
+
+The repository now includes [`.github/workflows/ci.yml`](.github/workflows/ci.yml), which:
+
+1. Runs on push and pull request
+2. Installs backend and frontend dependencies
+3. Runs backend coverage tests and frontend tests
+4. Builds the frontend bundle
+5. Uploads backend coverage artifacts
+6. Optionally builds and pushes Docker images on `main` or `master`
+
+### GitHub Secrets
+
+Set these repository secrets if you want image publishing from GitHub Actions:
+
+- `DOCKERHUB_USERNAME`
+- `DOCKERHUB_TOKEN`
+
 ## GitHub Integration Steps
 
 1. Create a GitHub repository for this project.
@@ -296,8 +379,8 @@ git push -u origin main
 ```
 
 4. In GitHub:
-  - Add repository secrets only if your workflow later needs them
-  - Configure a webhook to Jenkins
+  - Add `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` if you want GitHub Actions to publish images
+  - Configure a webhook to Jenkins if you want Jenkins-triggered deployment
 5. In Jenkins:
   - Create a Pipeline job using the repo
   - Point it at `Jenkinsfile`

@@ -14,7 +14,7 @@ describe("incidentService", () => {
     });
   });
 
-  test("reports, assigns, updates, and escalates incidents", async () => {
+  test("reports, assigns, closes, finalizes, and escalates incidents", async () => {
     const repositories = createRepositories({
       useInMemoryDb: true,
       defaultUsers
@@ -52,15 +52,23 @@ describe("incidentService", () => {
     const updated = await incidentService.updateStatus(
       incident._id,
       {
-        status: "in_progress"
+        status: "closed",
+        resolutionSummary: "Cable replaced and projector restarted."
       },
       technician
+    );
+    const finalized = await incidentService.updateStatus(
+      incident._id,
+      {
+        status: "completed"
+      },
+      admin
     );
     const escalated = await incidentService.runEscalationScan();
 
     expect(assigned.technicianId).toBe(technician._id);
-    expect(updated.status).toBe("in_progress");
-    expect(escalated).toHaveLength(1);
-    expect(escalated[0].escalated).toBe(true);
+    expect(updated.status).toBe("closed");
+    expect(finalized.status).toBe("completed");
+    expect(escalated).toHaveLength(0);
   });
 });

@@ -8,7 +8,10 @@ const sanitizeUser = (user) => {
   }
 
   const { passwordHash, ...safeUser } = user;
-  return safeUser;
+  return {
+    ...safeUser,
+    _id: safeUser._id ? String(safeUser._id) : safeUser._id
+  };
 };
 
 const normalizeEmail = (email) => String(email || "").trim().toLowerCase();

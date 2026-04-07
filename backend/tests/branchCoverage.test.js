@@ -75,6 +75,9 @@ describe("additional branch coverage", () => {
     await expect(service.updateStatus(incident._id, { status: "resolved" }, technician)).rejects.toThrow(
       "Technician is not assigned to this incident"
     );
+    await expect(service.updateStatus(incident._id, { status: "completed" }, admin)).rejects.toThrow(
+      "Admin can finalize incidents only after technician closure"
+    );
     expect(await service.runEscalationScan()).toEqual([]);
   });
 

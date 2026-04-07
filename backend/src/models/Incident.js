@@ -34,7 +34,7 @@ const incidentSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["open", "assigned", "in_progress", "resolved", "closed"],
+      enum: ["open", "assigned", "in_progress", "closed", "resolved", "completed"],
       default: "open"
     },
     reporterId: {

@@ -2,7 +2,7 @@ import React from "react";
 
 export function ModuleCard({ title, subtitle, children, accent = "var(--accent)" }) {
   return (
-    <section className="module-card" style={{ borderColor: accent }}>
+    <section className="module-card" style={{ "--card-accent": accent }}>
       <div className="module-card__header">
         <div>
           <h2>{title}</h2>

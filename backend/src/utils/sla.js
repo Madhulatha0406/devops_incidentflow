@@ -10,7 +10,7 @@ const isBreached = (incident, now = new Date()) => {
     return false;
   }
 
-  return !["resolved", "closed"].includes(incident.status) && new Date(incident.slaDueAt) < new Date(now);
+  return !["resolved", "closed", "completed"].includes(incident.status) && new Date(incident.slaDueAt) < new Date(now);
 };
 
 const buildEscalationState = (incident, now = new Date()) => {

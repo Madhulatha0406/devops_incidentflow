@@ -2,7 +2,7 @@ const request = require("supertest");
 const { createTestContext, loginAndGetToken } = require("./helpers");
 
 describe("API integration", () => {
-  test("supports auth, incidents, admin dashboard, buses, AI, and feature toggles", async () => {
+  test("supports auth, incidents, admin workflow, buses, AI, and feature toggles", async () => {
     const context = await createTestContext();
     const { app } = context;
 
@@ -50,15 +50,25 @@ describe("API integration", () => {
       .patch(`/api/incidents/${createdIncident.body.incident._id}/status`)
       .set("Authorization", `Bearer ${technicianToken}`)
       .send({
-        status: "resolved",
+        status: "closed",
         resolutionSummary: "Replaced the projector cable."
       });
     expect(updated.status).toBe(200);
+
+    const finalized = await request(app)
+      .patch(`/api/incidents/${createdIncident.body.incident._id}/status`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({
+        status: "completed",
+        resolutionSummary: "Admin verified the classroom is operational."
+      });
+    expect(finalized.status).toBe(200);
 
     const incidents = await request(app)
       .get("/api/incidents")
       .set("Authorization", `Bearer ${studentToken}`);
     expect(incidents.body.incidents).toHaveLength(1);
+    expect(incidents.body.incidents[0].status).toBe("completed");
 
     const buses = await request(app)
       .get("/api/buses")

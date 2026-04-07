@@ -7,10 +7,26 @@ jest.mock("../src/api/client", () => ({
 }));
 
 describe("App", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    global.fetch = jest.fn().mockResolvedValue({
+      json: jest.fn().mockResolvedValue({
+        status: "ok",
+        databaseMode: "mongo",
+        activeColor: "blue",
+        featureFlags: {
+          incidents: true,
+          busTracking: true,
+          aiCorrection: true
+        }
+      })
+    });
+  });
+
   test("renders the product headline and login card", () => {
     render(<App />);
-    expect(screen.getByText("IncidentFlow+")).toBeInTheDocument();
-    expect(screen.getByText("Demo Access")).toBeInTheDocument();
-    expect(screen.getByText("Smart Bus Tracking")).toBeInTheDocument();
+    expect(screen.getByText("IncidentFlow")).toBeInTheDocument();
+    expect(screen.getByText("Platform Status")).toBeInTheDocument();
+    expect(screen.getByText("Access Portal")).toBeInTheDocument();
   });
 });

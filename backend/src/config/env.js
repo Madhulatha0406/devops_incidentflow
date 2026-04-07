@@ -1,3 +1,31 @@
+const fs = require("fs");
+const path = require("path");
+
+const loadEnvFiles = ({ processObject = process, fsModule = fs, pathModule = path } = {}) => {
+  if (typeof processObject.loadEnvFile !== "function") {
+    return [];
+  }
+
+  const loadedFiles = [];
+  const candidatePaths = [
+    pathModule.resolve(__dirname, "../../../.env"),
+    pathModule.resolve(__dirname, "../../.env")
+  ];
+
+  candidatePaths.forEach((candidatePath) => {
+    if (!fsModule.existsSync(candidatePath)) {
+      return;
+    }
+
+    processObject.loadEnvFile(candidatePath);
+    loadedFiles.push(candidatePath);
+  });
+
+  return loadedFiles;
+};
+
+loadEnvFiles();
+
 const toBoolean = (value, fallback = false) => {
   if (value === undefined || value === null || value === "") {
     return fallback;
@@ -39,6 +67,7 @@ const env = {
 
 module.exports = {
   env,
+  loadEnvFiles,
   toBoolean,
   toNumber
 };

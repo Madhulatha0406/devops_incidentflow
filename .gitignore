@@ -3,6 +3,7 @@ backend/node_modules/
 frontend/node_modules/
 backend/coverage/
 frontend/coverage/
+coverage/
 frontend/dist/
 .env
 backend/.env

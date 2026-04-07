@@ -1,4 +1,5 @@
-const { env, toBoolean, toNumber } = require("../src/config/env");
+const path = require("path");
+const { env, loadEnvFiles, toBoolean, toNumber } = require("../src/config/env");
 
 describe("env config helpers", () => {
   test("toBoolean returns fallback for empty values", () => {
@@ -20,5 +21,24 @@ describe("env config helpers", () => {
   test("env exposes feature flags and SLA config", () => {
     expect(env.featureFlags).toHaveProperty("incidents");
     expect(env.slaHours).toHaveProperty("critical");
+  });
+
+  test("loadEnvFiles loads project and backend env files when available", () => {
+    const processObject = {
+      loadEnvFile: jest.fn()
+    };
+    const fsModule = {
+      existsSync: jest.fn().mockReturnValue(true)
+    };
+
+    const loadedFiles = loadEnvFiles({
+      processObject,
+      fsModule,
+      pathModule: path
+    });
+
+    expect(processObject.loadEnvFile).toHaveBeenCalledTimes(2);
+    expect(loadedFiles).toHaveLength(2);
+    expect(loadedFiles[0]).toMatch(/\.env$/);
   });
 });
