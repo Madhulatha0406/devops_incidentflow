@@ -73,12 +73,12 @@ pipeline {
           def dockerStatus
 
           if (isUnix()) {
-            dockerStatus = sh(script: 'docker info >/dev/null 2>&1', returnStatus: true)
+            dockerStatus = sh(script: 'docker version >/dev/null 2>&1', returnStatus: true)
           } else {
-            dockerStatus = bat(script: '@echo off\r\ndocker info >NUL 2>&1', returnStatus: true)
+            dockerStatus = bat(script: '@echo off\r\ndocker version >NUL 2>&1', returnStatus: true)
             if (dockerStatus != 0) {
               def desktopLinuxStatus = bat(
-                script: '@echo off\r\ndocker -H npipe:////./pipe/dockerDesktopLinuxEngine info >NUL 2>&1',
+                script: '@echo off\r\ndocker -H npipe:////./pipe/dockerDesktopLinuxEngine version >NUL 2>&1',
                 returnStatus: true
               )
 
