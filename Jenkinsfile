@@ -6,7 +6,6 @@ pipeline {
     BACKEND_IMAGE = "${env.BACKEND_IMAGE ?: 'incidentflow-plus-backend'}"
     FRONTEND_IMAGE = "${env.FRONTEND_IMAGE ?: 'incidentflow-plus-frontend'}"
     COVERAGE_TARGET = "75"
-    DOCKER_READY = "false"
     DOCKER_CONTEXT = "${env.DOCKER_CONTEXT ?: 'desktop-linux'}"
     DOCKER_CONFIG = "${env.DOCKER_CONFIG ?: 'C:\\Users\\madhu\\.docker'}"
   }
@@ -70,6 +69,7 @@ pipeline {
     stage('Check Docker Daemon') {
       steps {
         script {
+          env.DOCKER_AVAILABLE = 'false'
           def dockerStatus = 1
 
           if (isUnix()) {
@@ -103,9 +103,9 @@ pipeline {
             }
           }
 
-          env.DOCKER_READY = dockerStatus == 0 ? 'true' : 'false'
+          env.DOCKER_AVAILABLE = dockerStatus == 0 ? 'true' : 'false'
 
-          if (env.DOCKER_READY == 'true') {
+          if (env.DOCKER_AVAILABLE == 'true') {
             echo 'Docker daemon detected on the Jenkins agent. Image stages are enabled.'
           } else {
             echo 'Docker daemon is not available on this Jenkins agent. Skipping image build and push stages.'
@@ -117,7 +117,7 @@ pipeline {
     stage('Docker Diagnostics') {
       when {
         expression {
-          env.DOCKER_READY != 'true'
+          env.DOCKER_AVAILABLE != 'true'
         }
       }
       steps {
@@ -152,7 +152,7 @@ docker -H npipe:////./pipe/dockerDesktopLinuxEngine version
     stage('Build Images') {
       when {
         expression {
-          env.DOCKER_READY == 'true'
+          env.DOCKER_AVAILABLE == 'true'
         }
       }
       steps {
@@ -171,7 +171,7 @@ docker -H npipe:////./pipe/dockerDesktopLinuxEngine version
     stage('Push Images') {
       when {
         expression {
-          env.DOCKER_READY == 'true'
+          env.DOCKER_AVAILABLE == 'true'
         }
       }
       steps {
@@ -194,7 +194,7 @@ docker -H npipe:////./pipe/dockerDesktopLinuxEngine version
     stage('Feedback') {
       steps {
         script {
-          if (env.DOCKER_READY == 'true') {
+          if (env.DOCKER_AVAILABLE == 'true') {
             echo 'GREEN TICK'
           } else {
             echo 'GREEN TICK - test and build stages passed; Docker publish stages were skipped because the agent has no Docker daemon.'
