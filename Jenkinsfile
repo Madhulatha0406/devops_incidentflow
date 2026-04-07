@@ -76,6 +76,18 @@ pipeline {
             dockerStatus = sh(script: 'docker info >/dev/null 2>&1', returnStatus: true)
           } else {
             dockerStatus = bat(script: '@echo off\r\ndocker info >NUL 2>&1', returnStatus: true)
+            if (dockerStatus != 0) {
+              def desktopLinuxStatus = bat(
+                script: '@echo off\r\ndocker -H npipe:////./pipe/dockerDesktopLinuxEngine info >NUL 2>&1',
+                returnStatus: true
+              )
+
+              if (desktopLinuxStatus == 0) {
+                env.DOCKER_HOST = 'npipe:////./pipe/dockerDesktopLinuxEngine'
+                dockerStatus = 0
+                echo 'Connected to Docker Desktop through the desktop-linux engine pipe.'
+              }
+            }
           }
 
           env.DOCKER_READY = dockerStatus == 0 ? 'true' : 'false'
