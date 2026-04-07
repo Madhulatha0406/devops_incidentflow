@@ -7,6 +7,8 @@ pipeline {
     FRONTEND_IMAGE = "${env.FRONTEND_IMAGE ?: 'incidentflow-plus-frontend'}"
     COVERAGE_TARGET = "75"
     DOCKER_READY = "false"
+    DOCKER_CONTEXT = "${env.DOCKER_CONTEXT ?: 'desktop-linux'}"
+    DOCKER_CONFIG = "${env.DOCKER_CONFIG ?: 'C:\\Users\\madhu\\.docker'}"
   }
 
   triggers {
