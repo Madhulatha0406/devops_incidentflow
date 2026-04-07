@@ -70,22 +70,35 @@ pipeline {
     stage('Check Docker Daemon') {
       steps {
         script {
-          def dockerStatus
+          def dockerStatus = 1
 
           if (isUnix()) {
             dockerStatus = sh(script: 'docker version >/dev/null 2>&1', returnStatus: true)
           } else {
-            dockerStatus = bat(script: '@echo off\r\ndocker version >NUL 2>&1', returnStatus: true)
-            if (dockerStatus != 0) {
-              def desktopLinuxStatus = bat(
-                script: '@echo off\r\ndocker -H npipe:////./pipe/dockerDesktopLinuxEngine version >NUL 2>&1',
-                returnStatus: true
-              )
+            try {
+              def dockerVersion = bat(
+                script: '@echo off\r\ndocker version --format "{{.Server.Version}}"',
+                returnStdout: true
+              ).trim()
 
-              if (desktopLinuxStatus == 0) {
-                env.DOCKER_HOST = 'npipe:////./pipe/dockerDesktopLinuxEngine'
+              if (dockerVersion) {
                 dockerStatus = 0
-                echo 'Connected to Docker Desktop through the desktop-linux engine pipe.'
+                echo "Detected Docker server version ${dockerVersion} through the active Docker context."
+              }
+            } catch (_ignored) {
+              try {
+                def desktopLinuxVersion = bat(
+                  script: '@echo off\r\ndocker -H npipe:////./pipe/dockerDesktopLinuxEngine version --format "{{.Server.Version}}"',
+                  returnStdout: true
+                ).trim()
+
+                if (desktopLinuxVersion) {
+                  env.DOCKER_HOST = 'npipe:////./pipe/dockerDesktopLinuxEngine'
+                  dockerStatus = 0
+                  echo "Connected to Docker Desktop through the desktop-linux engine pipe (${desktopLinuxVersion})."
+                }
+              } catch (_ignoredToo) {
+                dockerStatus = 1
               }
             }
           }
