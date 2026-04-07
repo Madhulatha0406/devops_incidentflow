@@ -101,6 +101,41 @@ pipeline {
       }
     }
 
+    stage('Docker Diagnostics') {
+      when {
+        expression {
+          env.DOCKER_READY != 'true'
+        }
+      }
+      steps {
+        script {
+          if (isUnix()) {
+            sh '''
+              set +e
+              whoami || true
+              echo "DOCKER_HOST=$DOCKER_HOST"
+              echo "DOCKER_CONTEXT=$DOCKER_CONTEXT"
+              echo "DOCKER_CONFIG=$DOCKER_CONFIG"
+              which docker || true
+              docker version || true
+            '''
+          } else {
+            bat '''
+@echo off
+whoami
+echo DOCKER_HOST=%DOCKER_HOST%
+echo DOCKER_CONTEXT=%DOCKER_CONTEXT%
+echo DOCKER_CONFIG=%DOCKER_CONFIG%
+where docker
+docker version
+docker context ls
+docker -H npipe:////./pipe/dockerDesktopLinuxEngine version
+'''
+          }
+        }
+      }
+    }
+
     stage('Build Images') {
       when {
         expression {
