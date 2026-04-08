@@ -3,8 +3,7 @@
 IncidentFlow is a production-ready MERN-style campus operations platform that combines three practical modules in one system:
 
 - SLA-based IT incident management with escalation logic
-- Smart campus bus tracking with live mock GPS updates and delay alerts
-- AI-based answer correction suggestions for teachers
+
 
 The project is structured for DevOps evaluation with Docker, Docker Compose, Jenkins CI, GitHub Actions CI, feature toggles, health checks, logging, and blue-green deployment support.
 
