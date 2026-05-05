@@ -8,6 +8,7 @@ pipeline {
     COVERAGE_TARGET = "75"
     DOCKER_CONTEXT = "${env.DOCKER_CONTEXT ?: 'desktop-linux'}"
     DOCKER_CONFIG = "${env.DOCKER_CONFIG ?: 'C:\\Users\\madhu\\.docker'}"
+    SONAR_JDK_TOOL = "${env.SONAR_JDK_TOOL ?: 'JDK17'}"
   }
 
   triggers {
@@ -84,12 +85,23 @@ pipeline {
       steps {
         script {
           def scannerHome = tool 'SonarScanner'
+          def jdkHome = tool env.SONAR_JDK_TOOL
 
           withSonarQubeEnv('SonarQube') {
             if (isUnix()) {
-              sh "\"${scannerHome}/bin/sonar-scanner\" -Dsonar.host.url=\"$SONAR_HOST_URL\" -Dsonar.token=\"$SONAR_AUTH_TOKEN\""
+              withEnv([
+                "JAVA_HOME=${jdkHome}",
+                "PATH+SONAR_JAVA=${jdkHome}/bin"
+              ]) {
+                sh "\"${scannerHome}/bin/sonar-scanner\" -Dsonar.host.url=\"$SONAR_HOST_URL\" -Dsonar.token=\"$SONAR_AUTH_TOKEN\""
+              }
             } else {
-              bat "@echo off\r\n\"${scannerHome}\\bin\\sonar-scanner.bat\" -Dsonar.host.url=%SONAR_HOST_URL% -Dsonar.token=%SONAR_AUTH_TOKEN%"
+              withEnv([
+                "JAVA_HOME=${jdkHome}",
+                "PATH+SONAR_JAVA=${jdkHome}\\bin"
+              ]) {
+                bat "@echo off\r\n\"${scannerHome}\\bin\\sonar-scanner.bat\" -Dsonar.host.url=%SONAR_HOST_URL% -Dsonar.token=%SONAR_AUTH_TOKEN%"
+              }
             }
           }
         }
