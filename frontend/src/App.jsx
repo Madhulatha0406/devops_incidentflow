@@ -35,7 +35,7 @@ const loadSavedSession = () => {
 
   try {
     return JSON.parse(stored);
-  } catch (_error) {
+  } catch {
     window.localStorage.removeItem(SESSION_STORAGE_KEY);
     return null;
   }
@@ -77,7 +77,7 @@ export default function App() {
       const response = await fetch("/health");
       const payload = await response.json();
       setHealth(payload);
-    } catch (_error) {
+    } catch {
       setHealth(null);
     }
   };

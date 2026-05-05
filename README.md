@@ -17,7 +17,8 @@ IncidentFlow is a containerized web application for managing infrastructure-rela
 - Backend: Node.js + Express + Socket.IO
 - Database: MongoDB with Mongoose models
 - Authentication: JWT-based role access control
-- Testing: Jest + Supertest
+- Testing: Jest + Supertest + JMeter smoke plan
+- Static Analysis: ESLint + optional SonarQube scan
 - CI/CD: Jenkins pipeline plus GitHub Actions verification workflow
 - Deployment: Docker Compose with blue-green proxy switching
 
@@ -52,14 +53,21 @@ The main objective of this project is to demonstrate a complete DevOps lifecycle
 ### GitHub Actions
 
 - GitHub Actions now provides repository-native CI on push and pull request.
-- The workflow installs dependencies, runs backend coverage tests, runs frontend tests, builds the frontend, and uploads coverage artifacts.
+- The workflow installs dependencies, runs ESLint static analysis, runs backend coverage tests, runs frontend tests, builds the frontend, uploads coverage artifacts, and can trigger SonarQube scanning when secrets are configured.
 - If `DOCKERHUB_USERNAME` and `DOCKERHUB_TOKEN` are configured as GitHub Secrets, it also builds and pushes backend and frontend images.
 
 ### Testing and Coverage
 
 - Jest is used for unit testing.
 - Supertest is used for backend API integration testing.
+- JMeter is included for smoke-style performance and endpoint validation against a running environment.
 - The backend coverage gate stays above the required threshold, which proves the critical logic is verified automatically before deployment.
+
+### Static Code Analysis and SonarQube
+
+- ESLint provides local and CI static analysis for both backend and frontend code.
+- `sonar-project.properties` is included so the repository can be analyzed by SonarQube without restructuring the codebase.
+- Jenkins and GitHub Actions both skip SonarQube gracefully unless `SONAR_HOST_URL` and `SONAR_TOKEN` are configured.
 
 ### Monitoring and Logging
 
@@ -241,12 +249,62 @@ This enforces:
 - Supertest API integration tests
 - Minimum 75% global coverage
 
+### Explicit unit and integration commands
+
+```bash
+npm run test:unit
+npm run test:integration
+```
+
 ### Frontend tests
 
 ```bash
 cd frontend
 npm run test:ci
 ```
+
+### Frontend coverage
+
+```bash
+cd frontend
+npm run coverage
+```
+
+### Static analysis
+
+```bash
+npm ci
+npm run lint:ci
+```
+
+### SonarQube scan
+
+If `sonar-scanner` is installed and `SONAR_HOST_URL` plus `SONAR_TOKEN` are configured:
+
+```bash
+npm run sonar:scan
+```
+
+### JMeter smoke test
+
+If JMeter is installed:
+
+```powershell
+.\scripts\run-jmeter.ps1 -Host 127.0.0.1 -Port 5000
+```
+
+or on Linux/macOS:
+
+```bash
+bash scripts/run-jmeter.sh
+```
+
+The included plan lives at [`performance/jmeter/incidentflow-smoke-test.jmx`](performance/jmeter/incidentflow-smoke-test.jmx) and verifies:
+
+- `GET /health`
+- `POST /api/auth/login`
+- authenticated `GET /api/incidents`
+- authenticated `GET /api/buses`
 
 ### Root CI-style run
 
@@ -323,13 +381,17 @@ The deployment flow is:
 `Jenkinsfile` includes:
 
 1. Checkout from GitHub
-2. Install backend and frontend dependencies
-3. Run all tests
-4. Enforce backend coverage threshold of 75%
-5. Build Docker images
-6. Push images to your Docker registry
-7. Print `GREEN TICK` on success
-8. Print failure guidance when the pipeline fails
+2. Install repository, backend, and frontend dependencies
+3. Run ESLint static analysis
+4. Run all tests
+5. Enforce backend coverage threshold of 75%
+6. Build the frontend bundle
+7. Optionally run SonarQube analysis when configured
+8. Build Docker images
+9. Push images to your Docker registry
+10. Optionally run a JMeter smoke test when configured
+11. Print `GREEN TICK` on success
+12. Print failure guidance when the pipeline fails
 
 ### Jenkins prerequisites
 
@@ -339,17 +401,21 @@ The deployment flow is:
   - `DOCKER_REGISTRY`
   - `BACKEND_IMAGE`
   - `FRONTEND_IMAGE`
+  - `SONAR_HOST_URL` and `SONAR_TOKEN` for SonarQube
+  - `JMETER_HOST` plus optional `JMETER_PORT`, `JMETER_PROTOCOL`, `JMETER_STUDENT_EMAIL`, `JMETER_STUDENT_PASSWORD` for performance smoke testing
 
 ## GitHub Actions CI
 
 The repository now includes [`.github/workflows/ci.yml`](.github/workflows/ci.yml), which:
 
 1. Runs on push and pull request
-2. Installs backend and frontend dependencies
-3. Runs backend coverage tests and frontend tests
-4. Builds the frontend bundle
-5. Uploads backend coverage artifacts
-6. Optionally builds and pushes Docker images on `main` or `master`
+2. Installs root, backend, and frontend dependencies
+3. Runs ESLint static analysis
+4. Runs backend coverage tests and frontend tests
+5. Builds the frontend bundle
+6. Optionally runs SonarQube analysis
+7. Uploads backend and frontend coverage artifacts
+8. Optionally builds and pushes Docker images on `main` or `master`
 
 ### GitHub Secrets
 
@@ -357,6 +423,8 @@ Set these repository secrets if you want image publishing from GitHub Actions:
 
 - `DOCKERHUB_USERNAME`
 - `DOCKERHUB_TOKEN`
+- `SONAR_HOST_URL`
+- `SONAR_TOKEN`
 
 ## GitHub Integration Steps
 

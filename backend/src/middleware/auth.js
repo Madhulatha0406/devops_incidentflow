@@ -21,7 +21,7 @@ const createAuthenticate = ({ authService, jwtSecret }) => async (req, _res, nex
 
     req.user = user;
     next();
-  } catch (error) {
+  } catch {
     next(new AppError("Invalid or expired token", 401));
   }
 };

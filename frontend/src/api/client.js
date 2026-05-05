@@ -13,7 +13,7 @@ const createAuthHeaders = (token) =>
 const safeParseJson = (rawValue) => {
   try {
     return JSON.parse(rawValue);
-  } catch (_error) {
+  } catch {
     return null;
   }
 };

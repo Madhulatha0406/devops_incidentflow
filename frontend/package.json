@@ -7,7 +7,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "jest --runInBand",
-    "test:ci": "jest --runInBand"
+    "test:unit": "jest --runInBand",
+    "test:ci": "jest --runInBand",
+    "coverage": "jest --runInBand --coverage"
   },
   "dependencies": {
     "react": "^18.3.1",

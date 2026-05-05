@@ -7,6 +7,8 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "test": "jest --runInBand",
+    "test:unit": "jest --runInBand --testPathIgnorePatterns=tests/api.test.js",
+    "test:integration": "jest --runInBand tests/api.test.js",
     "test:ci": "jest --runInBand --coverage",
     "coverage": "jest --runInBand --coverage"
   },

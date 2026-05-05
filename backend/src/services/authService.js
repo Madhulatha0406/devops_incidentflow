@@ -7,7 +7,7 @@ const sanitizeUser = (user) => {
     return null;
   }
 
-  const { passwordHash, ...safeUser } = user;
+  const { passwordHash: _passwordHash, ...safeUser } = user;
   return {
     ...safeUser,
     _id: safeUser._id ? String(safeUser._id) : safeUser._id

@@ -30,11 +30,25 @@ pipeline {
       steps {
         script {
           if (isUnix()) {
+            sh 'npm ci'
             sh 'cd backend && npm ci'
             sh 'cd frontend && npm ci'
           } else {
+            bat 'npm ci'
             bat 'cd backend && npm ci'
             bat 'cd frontend && npm ci'
+          }
+        }
+      }
+    }
+
+    stage('Static Analysis') {
+      steps {
+        script {
+          if (isUnix()) {
+            sh 'npm run lint:ci'
+          } else {
+            bat 'npm run lint:ci'
           }
         }
       }
@@ -61,6 +75,35 @@ pipeline {
             sh 'cd frontend && npm run build'
           } else {
             bat 'cd frontend && npm run build'
+          }
+        }
+      }
+    }
+
+    stage('SonarQube Analysis') {
+      steps {
+        script {
+          if (!env.SONAR_HOST_URL?.trim() || !env.SONAR_TOKEN?.trim()) {
+            echo 'Skipping SonarQube analysis because SONAR_HOST_URL or SONAR_TOKEN is not configured.'
+            return
+          }
+
+          if (isUnix()) {
+            def sonarScannerStatus = sh(script: 'command -v sonar-scanner >/dev/null 2>&1', returnStatus: true)
+            if (sonarScannerStatus != 0) {
+              echo 'Skipping SonarQube analysis because sonar-scanner is not installed on this Jenkins agent.'
+              return
+            }
+
+            sh 'sonar-scanner -Dsonar.host.url="$SONAR_HOST_URL" -Dsonar.token="$SONAR_TOKEN"'
+          } else {
+            def sonarScannerStatus = bat(script: '@echo off\r\nwhere sonar-scanner >NUL 2>&1', returnStatus: true)
+            if (sonarScannerStatus != 0) {
+              echo 'Skipping SonarQube analysis because sonar-scanner is not installed on this Jenkins agent.'
+              return
+            }
+
+            bat '@echo off\r\nsonar-scanner -Dsonar.host.url=%SONAR_HOST_URL% -Dsonar.token=%SONAR_TOKEN%'
           }
         }
       }
@@ -191,6 +234,51 @@ docker -H npipe:////./pipe/dockerDesktopLinuxEngine version
       }
     }
 
+    stage('JMeter Smoke Test') {
+      steps {
+        script {
+          if (!env.JMETER_HOST?.trim()) {
+            echo 'Skipping JMeter smoke test because JMETER_HOST is not configured.'
+            return
+          }
+
+          if (isUnix()) {
+            def jmeterStatus = sh(script: 'command -v jmeter >/dev/null 2>&1', returnStatus: true)
+            if (jmeterStatus != 0) {
+              echo 'Skipping JMeter smoke test because JMeter is not installed on this Jenkins agent.'
+              return
+            }
+
+            withEnv([
+              "PROTOCOL=${env.JMETER_PROTOCOL ?: 'http'}",
+              "HOST=${env.JMETER_HOST}",
+              "PORT=${env.JMETER_PORT ?: '5000'}",
+              "STUDENT_EMAIL=${env.JMETER_STUDENT_EMAIL ?: 'student@incidentflow.local'}",
+              "STUDENT_PASSWORD=${env.JMETER_STUDENT_PASSWORD ?: 'Password123!'}"
+            ]) {
+              sh 'bash scripts/run-jmeter.sh'
+            }
+          } else {
+            def jmeterStatus = bat(script: '@echo off\r\nwhere jmeter.bat >NUL 2>&1', returnStatus: true)
+            if (jmeterStatus != 0 && !env.JMETER_HOME?.trim()) {
+              echo 'Skipping JMeter smoke test because JMeter is not installed on this Jenkins agent.'
+              return
+            }
+
+            bat """
+@echo off
+powershell -ExecutionPolicy Bypass -File scripts\\run-jmeter.ps1 ^
+  -Protocol ${env.JMETER_PROTOCOL ?: 'http'} ^
+  -Host ${env.JMETER_HOST} ^
+  -Port ${env.JMETER_PORT ?: '5000'} ^
+  -StudentEmail ${env.JMETER_STUDENT_EMAIL ?: 'student@incidentflow.local'} ^
+  -StudentPassword ${env.JMETER_STUDENT_PASSWORD ?: 'Password123!'}
+"""
+          }
+        }
+      }
+    }
+
     stage('Feedback') {
       steps {
         script {
@@ -209,7 +297,7 @@ docker -H npipe:////./pipe/dockerDesktopLinuxEngine version
       echo 'Build failed. Review Jenkins console logs, Jest coverage report, and Docker build output for clear remediation details.'
     }
     always {
-      archiveArtifacts artifacts: 'backend/coverage/**', allowEmptyArchive: true
+      archiveArtifacts artifacts: 'backend/coverage/**,frontend/coverage/**,performance/jmeter/results.jtl,performance/jmeter/report/**', allowEmptyArchive: true
     }
   }
 }
