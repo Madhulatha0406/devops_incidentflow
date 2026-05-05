@@ -83,27 +83,14 @@ pipeline {
     stage('SonarQube Analysis') {
       steps {
         script {
-          if (!env.SONAR_HOST_URL?.trim() || !env.SONAR_TOKEN?.trim()) {
-            echo 'Skipping SonarQube analysis because SONAR_HOST_URL or SONAR_TOKEN is not configured.'
-            return
-          }
+          def scannerHome = tool 'SonarScanner'
 
-          if (isUnix()) {
-            def sonarScannerStatus = sh(script: 'command -v sonar-scanner >/dev/null 2>&1', returnStatus: true)
-            if (sonarScannerStatus != 0) {
-              echo 'Skipping SonarQube analysis because sonar-scanner is not installed on this Jenkins agent.'
-              return
+          withSonarQubeEnv('SonarQube') {
+            if (isUnix()) {
+              sh "\"${scannerHome}/bin/sonar-scanner\" -Dsonar.host.url=\"$SONAR_HOST_URL\" -Dsonar.token=\"$SONAR_AUTH_TOKEN\""
+            } else {
+              bat "@echo off\r\n\"${scannerHome}\\bin\\sonar-scanner.bat\" -Dsonar.host.url=%SONAR_HOST_URL% -Dsonar.token=%SONAR_AUTH_TOKEN%"
             }
-
-            sh 'sonar-scanner -Dsonar.host.url="$SONAR_HOST_URL" -Dsonar.token="$SONAR_TOKEN"'
-          } else {
-            def sonarScannerStatus = bat(script: '@echo off\r\nwhere sonar-scanner >NUL 2>&1', returnStatus: true)
-            if (sonarScannerStatus != 0) {
-              echo 'Skipping SonarQube analysis because sonar-scanner is not installed on this Jenkins agent.'
-              return
-            }
-
-            bat '@echo off\r\nsonar-scanner -Dsonar.host.url=%SONAR_HOST_URL% -Dsonar.token=%SONAR_TOKEN%'
           }
         }
       }
