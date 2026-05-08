@@ -313,7 +313,7 @@ exit /b 0
             ]) {
               bat """
 @echo off
-powershell -ExecutionPolicy Bypass -File scripts\\run-jmeter.ps1 ^
+C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -ExecutionPolicy Bypass -File scripts\\run-jmeter.ps1 ^
   -Protocol ${env.JMETER_PROTOCOL ?: 'http'} ^
   -TargetHost ${env.JMETER_HOST} ^
   -Port ${env.JMETER_PORT ?: '5000'} ^
