@@ -9,27 +9,27 @@
         <collectionProp name="Arguments.arguments">
           <elementProp name="protocol" elementType="Argument">
             <stringProp name="Argument.name">protocol</stringProp>
-            <stringProp name="Argument.value">${__P(protocol,http)}</stringProp>
+            <stringProp name="Argument.value">__JMETER_PROTOCOL__</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="host" elementType="Argument">
             <stringProp name="Argument.name">host</stringProp>
-            <stringProp name="Argument.value">${__P(host,127.0.0.1)}</stringProp>
+            <stringProp name="Argument.value">__JMETER_HOST__</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="port" elementType="Argument">
             <stringProp name="Argument.name">port</stringProp>
-            <stringProp name="Argument.value">${__P(port,5000)}</stringProp>
+            <stringProp name="Argument.value">__JMETER_PORT__</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="studentEmail" elementType="Argument">
             <stringProp name="Argument.name">studentEmail</stringProp>
-            <stringProp name="Argument.value">${__P(studentEmail,student@incidentflow.local)}</stringProp>
+            <stringProp name="Argument.value">__JMETER_STUDENT_EMAIL__</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
           <elementProp name="studentPassword" elementType="Argument">
             <stringProp name="Argument.name">studentPassword</stringProp>
-            <stringProp name="Argument.value">${__P(studentPassword,Password123!)}</stringProp>
+            <stringProp name="Argument.value">__JMETER_STUDENT_PASSWORD__</stringProp>
             <stringProp name="Argument.metadata">=</stringProp>
           </elementProp>
         </collectionProp>

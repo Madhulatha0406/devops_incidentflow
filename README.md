@@ -290,7 +290,7 @@ npm run sonar:scan
 If JMeter is installed:
 
 ```powershell
-.\scripts\run-jmeter.ps1 -Host 127.0.0.1 -Port 5000
+.\scripts\run-jmeter.ps1 -TargetHost 127.0.0.1 -Port 5000
 ```
 
 or on Linux/macOS:
@@ -305,6 +305,8 @@ The included plan lives at [`performance/jmeter/incidentflow-smoke-test.jmx`](pe
 - `POST /api/auth/login`
 - authenticated `GET /api/incidents`
 - authenticated `GET /api/buses`
+
+JMeter also needs a valid Java installation. If `jmeter.bat` cannot find Java, set `JAVA_HOME` to a working JDK before running the smoke test.
 
 ### Root CI-style run
 
@@ -398,11 +400,12 @@ The deployment flow is:
 - GitHub webhook configured to trigger Jenkins on push
 - Jenkins credentials with ID `docker-registry-creds`
 - Environment variables or global config for:
-  - `DOCKER_REGISTRY`
-  - `BACKEND_IMAGE`
-  - `FRONTEND_IMAGE`
-  - `SONAR_HOST_URL` and `SONAR_TOKEN` for SonarQube
-  - `JMETER_HOST` plus optional `JMETER_PORT`, `JMETER_PROTOCOL`, `JMETER_STUDENT_EMAIL`, `JMETER_STUDENT_PASSWORD` for performance smoke testing
+- `DOCKER_REGISTRY`
+- `BACKEND_IMAGE`
+- `FRONTEND_IMAGE`
+- `SONAR_HOST_URL` and `SONAR_TOKEN` for SonarQube
+- `JMETER_JDK_TOOL` (defaults to `JDK17`) for the JMeter CLI runtime
+- `JMETER_HOST` plus optional `JMETER_PORT`, `JMETER_PROTOCOL`, `JMETER_STUDENT_EMAIL`, `JMETER_STUDENT_PASSWORD` for performance smoke testing
 
 ## GitHub Actions CI
 

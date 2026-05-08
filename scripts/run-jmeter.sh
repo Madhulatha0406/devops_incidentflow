@@ -19,16 +19,32 @@ else
   exit 1
 fi
 
+if [[ -n "${JAVA_HOME:-}" && -x "${JAVA_HOME}/bin/java" ]]; then
+  export PATH="${JAVA_HOME}/bin:${PATH}"
+fi
+
+rm -rf "${REPORT_PATH}"
+rm -f "${RESULTS_PATH}"
 mkdir -p "${REPORT_PATH}"
+
+escape_sed() {
+  printf '%s' "$1" | sed -e 's/[\/&]/\\&/g'
+}
+
+rendered_plan="$(mktemp "${TMPDIR:-/tmp}/incidentflow-jmeter.XXXXXX.jmx")"
+trap 'rm -f "${rendered_plan}"' EXIT
+
+sed \
+  -e "s/__JMETER_PROTOCOL__/$(escape_sed "${PROTOCOL}")/g" \
+  -e "s/__JMETER_HOST__/$(escape_sed "${HOST}")/g" \
+  -e "s/__JMETER_PORT__/$(escape_sed "${PORT}")/g" \
+  -e "s/__JMETER_STUDENT_EMAIL__/$(escape_sed "${STUDENT_EMAIL}")/g" \
+  -e "s/__JMETER_STUDENT_PASSWORD__/$(escape_sed "${STUDENT_PASSWORD}")/g" \
+  "${PLAN_PATH}" > "${rendered_plan}"
 
 "${JMETER_BIN}" \
   -n \
-  -t "${PLAN_PATH}" \
+  -t "${rendered_plan}" \
   -l "${RESULTS_PATH}" \
   -e \
-  -o "${REPORT_PATH}" \
-  -Jprotocol="${PROTOCOL}" \
-  -Jhost="${HOST}" \
-  -Jport="${PORT}" \
-  -JstudentEmail="${STUDENT_EMAIL}" \
-  -JstudentPassword="${STUDENT_PASSWORD}"
+  -o "${REPORT_PATH}"

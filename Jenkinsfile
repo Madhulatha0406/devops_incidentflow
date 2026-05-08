@@ -9,6 +9,7 @@ pipeline {
     DOCKER_CONTEXT = "${env.DOCKER_CONTEXT ?: 'desktop-linux'}"
     DOCKER_CONFIG = "${env.DOCKER_CONFIG ?: 'C:\\Users\\madhu\\.docker'}"
     SONAR_JDK_TOOL = "${env.SONAR_JDK_TOOL ?: 'JDK17'}"
+    JMETER_JDK_TOOL = "${env.JMETER_JDK_TOOL ?: 'JDK17'}"
   }
 
   triggers {
@@ -248,7 +249,11 @@ docker -H npipe:////./pipe/dockerDesktopLinuxEngine version
               return
             }
 
+            def jmeterJdkHome = tool env.JMETER_JDK_TOOL
+
             withEnv([
+              "JAVA_HOME=${jmeterJdkHome}",
+              "PATH+JMETER_JAVA=${jmeterJdkHome}/bin",
               "PROTOCOL=${env.JMETER_PROTOCOL ?: 'http'}",
               "HOST=${env.JMETER_HOST}",
               "PORT=${env.JMETER_PORT ?: '5000'}",
@@ -264,15 +269,22 @@ docker -H npipe:////./pipe/dockerDesktopLinuxEngine version
               return
             }
 
-            bat """
+            def jmeterJdkHome = tool env.JMETER_JDK_TOOL
+
+            withEnv([
+              "JAVA_HOME=${jmeterJdkHome}",
+              "PATH+JMETER_JAVA=${jmeterJdkHome}\\bin"
+            ]) {
+              bat """
 @echo off
 powershell -ExecutionPolicy Bypass -File scripts\\run-jmeter.ps1 ^
   -Protocol ${env.JMETER_PROTOCOL ?: 'http'} ^
-  -Host ${env.JMETER_HOST} ^
+  -TargetHost ${env.JMETER_HOST} ^
   -Port ${env.JMETER_PORT ?: '5000'} ^
   -StudentEmail ${env.JMETER_STUDENT_EMAIL ?: 'student@incidentflow.local'} ^
   -StudentPassword ${env.JMETER_STUDENT_PASSWORD ?: 'Password123!'}
 """
+            }
           }
         }
       }
