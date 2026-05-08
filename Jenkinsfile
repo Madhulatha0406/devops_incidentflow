@@ -143,6 +143,7 @@ pipeline {
 
             if (dockerDesktopCliStatus == 0) {
               dockerCmd = "\"${dockerDesktopCli}\""
+              env.DOCKER_BIN_DIR = 'C:\\Program Files\\Docker\\Docker\\resources\\bin'
             }
 
             try {
@@ -235,8 +236,10 @@ exit /b 0
             sh "docker build -t ${REGISTRY}/${BACKEND_IMAGE}:${env.BUILD_NUMBER} backend"
             sh "docker build -t ${REGISTRY}/${FRONTEND_IMAGE}:${env.BUILD_NUMBER} frontend"
           } else {
-            bat "${env.DOCKER_CMD ?: 'docker'} build -t %REGISTRY%/%BACKEND_IMAGE%:%BUILD_NUMBER% backend"
-            bat "${env.DOCKER_CMD ?: 'docker'} build -t %REGISTRY%/%FRONTEND_IMAGE%:%BUILD_NUMBER% frontend"
+            withEnv(["PATH+DOCKER=${env.DOCKER_BIN_DIR ?: 'C:\\Program Files\\Docker\\Docker\\resources\\bin'}"]) {
+              bat "${env.DOCKER_CMD ?: 'docker'} build -t %REGISTRY%/%BACKEND_IMAGE%:%BUILD_NUMBER% backend"
+              bat "${env.DOCKER_CMD ?: 'docker'} build -t %REGISTRY%/%FRONTEND_IMAGE%:%BUILD_NUMBER% frontend"
+            }
           }
         }
       }
@@ -256,9 +259,11 @@ exit /b 0
               sh "docker push ${REGISTRY}/${BACKEND_IMAGE}:${env.BUILD_NUMBER}"
               sh "docker push ${REGISTRY}/${FRONTEND_IMAGE}:${env.BUILD_NUMBER}"
             } else {
-              bat "@echo off && echo %DOCKER_PASS%| ${env.DOCKER_CMD ?: 'docker'} login -u %DOCKER_USER% --password-stdin"
-              bat "${env.DOCKER_CMD ?: 'docker'} push %REGISTRY%/%BACKEND_IMAGE%:%BUILD_NUMBER%"
-              bat "${env.DOCKER_CMD ?: 'docker'} push %REGISTRY%/%FRONTEND_IMAGE%:%BUILD_NUMBER%"
+              withEnv(["PATH+DOCKER=${env.DOCKER_BIN_DIR ?: 'C:\\Program Files\\Docker\\Docker\\resources\\bin'}"]) {
+                bat "@echo off && echo %DOCKER_PASS%| ${env.DOCKER_CMD ?: 'docker'} login -u %DOCKER_USER% --password-stdin"
+                bat "${env.DOCKER_CMD ?: 'docker'} push %REGISTRY%/%BACKEND_IMAGE%:%BUILD_NUMBER%"
+                bat "${env.DOCKER_CMD ?: 'docker'} push %REGISTRY%/%FRONTEND_IMAGE%:%BUILD_NUMBER%"
+              }
             }
           }
         }
