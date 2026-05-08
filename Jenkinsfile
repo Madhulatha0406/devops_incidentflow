@@ -89,20 +89,36 @@ pipeline {
           def jdkHome = tool env.SONAR_JDK_TOOL
 
           withSonarQubeEnv('SonarQube') {
+            if (!env.SONAR_HOST_URL?.trim() || !env.SONAR_AUTH_TOKEN?.trim()) {
+              echo 'Skipping SonarQube analysis because SONAR_HOST_URL or SONAR_AUTH_TOKEN is not configured.'
+              return
+            }
+
+            def sonarStatus = 1
             if (isUnix()) {
               withEnv([
                 "JAVA_HOME=${jdkHome}",
                 "PATH+SONAR_JAVA=${jdkHome}/bin"
               ]) {
-                sh "\"${scannerHome}/bin/sonar-scanner\" -Dsonar.host.url=\"$SONAR_HOST_URL\" -Dsonar.token=\"$SONAR_AUTH_TOKEN\""
+                sonarStatus = sh(
+                  script: "\"${scannerHome}/bin/sonar-scanner\" -Dsonar.host.url=\"$SONAR_HOST_URL\" -Dsonar.token=\"$SONAR_AUTH_TOKEN\"",
+                  returnStatus: true
+                )
               }
             } else {
               withEnv([
                 "JAVA_HOME=${jdkHome}",
                 "PATH+SONAR_JAVA=${jdkHome}\\bin"
               ]) {
-                bat "@echo off\r\n\"${scannerHome}\\bin\\sonar-scanner.bat\" -Dsonar.host.url=%SONAR_HOST_URL% -Dsonar.token=%SONAR_AUTH_TOKEN%"
+                sonarStatus = bat(
+                  script: "@echo off\r\n\"${scannerHome}\\bin\\sonar-scanner.bat\" -Dsonar.host.url=%SONAR_HOST_URL% -Dsonar.token=%SONAR_AUTH_TOKEN%",
+                  returnStatus: true
+                )
               }
+            }
+
+            if (sonarStatus != 0) {
+              echo "Skipping SonarQube quality scan result because scanner exited with status ${sonarStatus}. Check that SonarQube is running at ${env.SONAR_HOST_URL}."
             }
           }
         }
@@ -118,25 +134,38 @@ pipeline {
           if (isUnix()) {
             dockerStatus = sh(script: 'docker version >/dev/null 2>&1', returnStatus: true)
           } else {
+            def dockerCmd = 'docker'
+            def dockerDesktopCli = 'C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe'
+            def dockerDesktopCliStatus = bat(
+              script: "@echo off\r\nif exist \"${dockerDesktopCli}\" exit /b 0\r\nexit /b 1",
+              returnStatus: true
+            )
+
+            if (dockerDesktopCliStatus == 0) {
+              dockerCmd = "\"${dockerDesktopCli}\""
+            }
+
             try {
               def dockerVersion = bat(
-                script: '@echo off\r\ndocker version --format "{{.Server.Version}}"',
+                script: "@echo off\r\n${dockerCmd} version --format \"{{.Server.Version}}\"",
                 returnStdout: true
               ).trim()
 
               if (dockerVersion) {
                 dockerStatus = 0
+                env.DOCKER_CMD = dockerCmd
                 echo "Detected Docker server version ${dockerVersion} through the active Docker context."
               }
             } catch (_ignored) {
               try {
                 def desktopLinuxVersion = bat(
-                  script: '@echo off\r\ndocker -H npipe:////./pipe/dockerDesktopLinuxEngine version --format "{{.Server.Version}}"',
+                  script: "@echo off\r\n${dockerCmd} -H npipe:////./pipe/dockerDesktopLinuxEngine version --format \"{{.Server.Version}}\"",
                   returnStdout: true
                 ).trim()
 
                 if (desktopLinuxVersion) {
                   env.DOCKER_HOST = 'npipe:////./pipe/dockerDesktopLinuxEngine'
+                  env.DOCKER_CMD = dockerCmd
                   dockerStatus = 0
                   echo "Connected to Docker Desktop through the desktop-linux engine pipe (${desktopLinuxVersion})."
                 }
@@ -183,9 +212,11 @@ echo DOCKER_HOST=%DOCKER_HOST%
 echo DOCKER_CONTEXT=%DOCKER_CONTEXT%
 echo DOCKER_CONFIG=%DOCKER_CONFIG%
 where docker
+if exist "C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe" "C:\\Program Files\\Docker\\Docker\\resources\\bin\\docker.exe" version
 docker version
 docker context ls
 docker -H npipe:////./pipe/dockerDesktopLinuxEngine version
+exit /b 0
 '''
           }
         }
@@ -204,8 +235,8 @@ docker -H npipe:////./pipe/dockerDesktopLinuxEngine version
             sh "docker build -t ${REGISTRY}/${BACKEND_IMAGE}:${env.BUILD_NUMBER} backend"
             sh "docker build -t ${REGISTRY}/${FRONTEND_IMAGE}:${env.BUILD_NUMBER} frontend"
           } else {
-            bat "docker build -t %REGISTRY%/%BACKEND_IMAGE%:%BUILD_NUMBER% backend"
-            bat "docker build -t %REGISTRY%/%FRONTEND_IMAGE%:%BUILD_NUMBER% frontend"
+            bat "${env.DOCKER_CMD ?: 'docker'} build -t %REGISTRY%/%BACKEND_IMAGE%:%BUILD_NUMBER% backend"
+            bat "${env.DOCKER_CMD ?: 'docker'} build -t %REGISTRY%/%FRONTEND_IMAGE%:%BUILD_NUMBER% frontend"
           }
         }
       }
@@ -225,9 +256,9 @@ docker -H npipe:////./pipe/dockerDesktopLinuxEngine version
               sh "docker push ${REGISTRY}/${BACKEND_IMAGE}:${env.BUILD_NUMBER}"
               sh "docker push ${REGISTRY}/${FRONTEND_IMAGE}:${env.BUILD_NUMBER}"
             } else {
-              bat '@echo off && echo %DOCKER_PASS%| docker login -u %DOCKER_USER% --password-stdin'
-              bat 'docker push %REGISTRY%/%BACKEND_IMAGE%:%BUILD_NUMBER%'
-              bat 'docker push %REGISTRY%/%FRONTEND_IMAGE%:%BUILD_NUMBER%'
+              bat "@echo off && echo %DOCKER_PASS%| ${env.DOCKER_CMD ?: 'docker'} login -u %DOCKER_USER% --password-stdin"
+              bat "${env.DOCKER_CMD ?: 'docker'} push %REGISTRY%/%BACKEND_IMAGE%:%BUILD_NUMBER%"
+              bat "${env.DOCKER_CMD ?: 'docker'} push %REGISTRY%/%FRONTEND_IMAGE%:%BUILD_NUMBER%"
             }
           }
         }
