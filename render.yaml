@@ -1,0 +1,95 @@
+services:
+  - type: web
+    name: incidentflow-backend
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    envVars:
+      - key: PORT
+        value: "10000"
+      - key: NODE_ENV
+        value: production
+      - key: USE_IN_MEMORY_DB
+        value: "true"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 8h
+      - key: CLIENT_ORIGIN
+        value: "*"
+      - key: FEATURE_INCIDENTS
+        value: "true"
+      - key: ESCALATION_SCAN_INTERVAL_MS
+        value: "5000"
+      - key: ACTIVE_COLOR
+        value: render
+
+  - type: web
+    name: incidentflow-frontend
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./deploy/render/frontend.Dockerfile
+    dockerContext: .
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    envVars:
+      - key: BACKEND_PUBLIC_URL
+        fromService:
+          type: web
+          name: incidentflow-backend
+          envVarKey: RENDER_EXTERNAL_URL
+
+  - type: web
+    name: incidentflow-blackbox
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./deploy/render/blackbox.Dockerfile
+    dockerContext: .
+    autoDeployTrigger: commit
+    envVars:
+      - key: PORT
+        value: "10000"
+
+  - type: web
+    name: incidentflow-prometheus
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./deploy/render/prometheus.Dockerfile
+    dockerContext: .
+    healthCheckPath: /-/healthy
+    autoDeployTrigger: commit
+    envVars:
+      - key: PORT
+        value: "10000"
+      - key: BACKEND_PUBLIC_URL
+        fromService:
+          type: web
+          name: incidentflow-backend
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: BACKEND_PUBLIC_HOST
+        fromService:
+          type: web
+          name: incidentflow-backend
+          envVarKey: RENDER_EXTERNAL_HOSTNAME
+      - key: FRONTEND_PUBLIC_URL
+        fromService:
+          type: web
+          name: incidentflow-frontend
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: FRONTEND_PUBLIC_HOST
+        fromService:
+          type: web
+          name: incidentflow-frontend
+          envVarKey: RENDER_EXTERNAL_HOSTNAME
+      - key: BLACKBOX_PUBLIC_HOST
+        fromService:
+          type: web
+          name: incidentflow-blackbox
+          envVarKey: RENDER_EXTERNAL_HOSTNAME

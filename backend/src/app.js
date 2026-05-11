@@ -4,6 +4,7 @@ const helmet = require("helmet");
 const { createRequestLogger } = require("./middleware/requestLogger");
 const { createErrorHandler, notFoundHandler } = require("./middleware/errorHandler");
 const { createRouter } = require("./routes");
+const { createCorsOriginValidator } = require("./utils/corsOrigin");
 
 const createApp = ({ env, logger, controllers, services }) => {
   const app = express();
@@ -12,7 +13,7 @@ const createApp = ({ env, logger, controllers, services }) => {
   app.use(helmet());
   app.use(
     cors({
-      origin: env.clientOrigin
+      origin: createCorsOriginValidator(env.clientOrigin)
     })
   );
   app.use(express.json());
