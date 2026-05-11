@@ -1,6 +1,5 @@
 const { User } = require("../src/models/User");
 const { Incident } = require("../src/models/Incident");
-const { BusState } = require("../src/models/BusState");
 const { createMemoryRepositories, createMongoRepositories, createRepositories } = require("../src/repositories/createRepositories");
 const { defaultUsers } = require("../src/config/defaultUsers");
 
@@ -9,7 +8,7 @@ describe("repositories", () => {
     jest.restoreAllMocks();
   });
 
-  test("memory repositories filter incidents and persist buses", async () => {
+  test("memory repositories filter and persist incidents", async () => {
     const repositories = createMemoryRepositories({ defaultUsers });
     const student = await repositories.users.findByEmail("student@incidentflow.local");
     const technician = await repositories.users.findByEmail("aditya@incidentflow.local");
@@ -27,9 +26,6 @@ describe("repositories", () => {
 
     await repositories.incidents.update(created._id, { status: "resolved" });
     expect((await repositories.incidents.findById(created._id)).status).toBe("resolved");
-
-    await repositories.buses.saveAll([{ busId: "BUS-1" }]);
-    expect((await repositories.buses.listAll())[0].busId).toBe("BUS-1");
   });
 
   test("createRepositories returns the requested mode", () => {
@@ -51,9 +47,6 @@ describe("repositories", () => {
     jest.spyOn(Incident, "findById").mockReturnValue({ lean: jest.fn().mockResolvedValue({ _id: "inc-1" }) });
     jest.spyOn(Incident, "findByIdAndUpdate").mockReturnValue({ lean: jest.fn().mockResolvedValue({ _id: "inc-1", status: "open" }) });
 
-    jest.spyOn(BusState, "find").mockReturnValue({ sort: jest.fn().mockReturnValue({ lean: jest.fn().mockResolvedValue([{ busId: "BUS-1" }]) }) });
-    jest.spyOn(BusState, "findOneAndUpdate").mockResolvedValue(undefined);
-
     const repositories = createMongoRepositories();
     await repositories.users.seedDefaults([
       { name: "Admin", email: "admin@example.com", password: "Password123!", role: "admin" }
@@ -66,11 +59,8 @@ describe("repositories", () => {
     await repositories.incidents.findById("inc-1");
     await repositories.incidents.list();
     await repositories.incidents.update("inc-1", { status: "open" });
-    await repositories.buses.listAll();
-    await repositories.buses.saveAll([{ busId: "BUS-1" }]);
 
     expect(User.create).toHaveBeenCalled();
     expect(Incident.findByIdAndUpdate).toHaveBeenCalled();
-    expect(BusState.findOneAndUpdate).toHaveBeenCalled();
   });
 });

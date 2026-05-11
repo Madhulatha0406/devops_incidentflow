@@ -40,15 +40,68 @@ describe("authService", () => {
     expect(login.user.email).toBe("new.tech@example.com");
   });
 
+  test("records auth outcomes for registration and login", async () => {
+    const repositories = createRepositories({
+      useInMemoryDb: true,
+      defaultUsers
+    });
+    const monitoringService = {
+      recordAuthAttempt: jest.fn()
+    };
+    const authService = createAuthService({
+      repositories,
+      jwtSecret: "secret",
+      jwtExpiresIn: "1h",
+      monitoringService
+    });
+
+    await authService.registerStudent({
+      name: "Metrics Student",
+      email: "metrics@student.local",
+      password: "Password123!"
+    });
+    await authService.login({
+      email: "metrics@student.local",
+      password: "Password123!"
+    });
+
+    await expect(
+      authService.login({
+        email: "metrics@student.local",
+        password: "WrongPassword!"
+      })
+    ).rejects.toThrow("Invalid email or password");
+
+    expect(monitoringService.recordAuthAttempt).toHaveBeenCalledWith({
+      action: "register",
+      outcome: "success",
+      role: "student"
+    });
+    expect(monitoringService.recordAuthAttempt).toHaveBeenCalledWith({
+      action: "login",
+      outcome: "success",
+      role: "student"
+    });
+    expect(monitoringService.recordAuthAttempt).toHaveBeenCalledWith({
+      action: "login",
+      outcome: "failure",
+      role: "student"
+    });
+  });
+
   test("prevents duplicate student registration", async () => {
     const repositories = createRepositories({
       useInMemoryDb: true,
       defaultUsers
     });
+    const monitoringService = {
+      recordAuthAttempt: jest.fn()
+    };
     const authService = createAuthService({
       repositories,
       jwtSecret: "secret",
-      jwtExpiresIn: "1h"
+      jwtExpiresIn: "1h",
+      monitoringService
     });
 
     await expect(
@@ -58,5 +111,10 @@ describe("authService", () => {
         password: "Password123!"
       })
     ).rejects.toThrow("User already exists with this email");
+    expect(monitoringService.recordAuthAttempt).toHaveBeenCalledWith({
+      action: "register",
+      outcome: "failure",
+      role: "student"
+    });
   });
 });

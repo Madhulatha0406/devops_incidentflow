@@ -109,5 +109,39 @@ services:
     ports:
       - "${PROXY_PORT}:80"
 
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: incidentflow-prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+    volumes:
+      - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    depends_on:
+      backend-blue:
+        condition: service_started
+      backend-green:
+        condition: service_started
+      blackbox:
+        condition: service_started
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+
+  blackbox:
+    image: prom/blackbox-exporter:v0.27.0
+    container_name: incidentflow-blackbox
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/blackbox_exporter/config.yml
+    cap_add:
+      - NET_RAW
+    volumes:
+      - ./deploy/prometheus/blackbox.yml:/etc/blackbox_exporter/config.yml:ro
+    ports:
+      - "${BLACKBOX_PORT:-9115}:9115"
+
 volumes:
   mongo_data:
+  prometheus_data:

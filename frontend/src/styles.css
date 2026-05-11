@@ -554,10 +554,7 @@ button:disabled {
 }
 
 .incident-item,
-.user-row,
-.bus-card,
-.analysis-box,
-.alert-banner {
+.user-row {
   padding: 1.15rem 0;
   border-top: 1px solid var(--border);
   background: transparent;
@@ -685,8 +682,7 @@ button:disabled {
   margin-bottom: 0.45rem;
 }
 
-.timeline small,
-.bus-card small {
+.timeline small {
   display: block;
   margin-top: 0.28rem;
   color: var(--ink-faint);

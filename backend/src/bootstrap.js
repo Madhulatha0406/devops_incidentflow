@@ -8,18 +8,65 @@ const { createRepositories } = require("./repositories/createRepositories");
 const { createFeatureFlagService } = require("./services/featureFlagService");
 const { createAuthService } = require("./services/authService");
 const { createIncidentService } = require("./services/incidentService");
-const { createBusService } = require("./services/busService");
-const { createAICorrectionService } = require("./services/aiCorrectionService");
 const { createAnalyticsService } = require("./services/analyticsService");
+const { createMonitoringService } = require("./services/monitoringService");
 const { createAuthController } = require("./controllers/authController");
 const { createIncidentController } = require("./controllers/incidentController");
-const { createBusController } = require("./controllers/busController");
-const { createAIController } = require("./controllers/aiController");
 const { createAdminController } = require("./controllers/adminController");
 const { createHealthController } = require("./controllers/healthController");
-const { createBusTrackerJob } = require("./jobs/busTracker");
 const { createEscalationMonitorJob } = require("./jobs/escalationMonitor");
 const { createApp } = require("./app");
+
+const instrumentRepositories = (repositories, monitoringService) => {
+  if (!monitoringService) {
+    return repositories;
+  }
+
+  return Object.entries(repositories).reduce((wrappedRepositories, [repositoryName, repositoryValue]) => {
+    if (typeof repositoryValue !== "object" || repositoryValue === null || Array.isArray(repositoryValue)) {
+      wrappedRepositories[repositoryName] = repositoryValue;
+      return wrappedRepositories;
+    }
+
+    wrappedRepositories[repositoryName] = Object.entries(repositoryValue).reduce(
+      (wrappedOperations, [operationName, operationValue]) => {
+        if (typeof operationValue !== "function") {
+          wrappedOperations[operationName] = operationValue;
+          return wrappedOperations;
+        }
+
+        wrappedOperations[operationName] = async (...args) => {
+          const startedAt = process.hrtime.bigint();
+          try {
+            const result = await operationValue(...args);
+            monitoringService.observeRepositoryOperation({
+              repository: repositoryName,
+              operation: operationName,
+              mode: repositories.mode,
+              outcome: "success",
+              durationSeconds: Number(process.hrtime.bigint() - startedAt) / 1e9
+            });
+            return result;
+          } catch (error) {
+            monitoringService.observeRepositoryOperation({
+              repository: repositoryName,
+              operation: operationName,
+              mode: repositories.mode,
+              outcome: "error",
+              durationSeconds: Number(process.hrtime.bigint() - startedAt) / 1e9
+            });
+            throw error;
+          }
+        };
+
+        return wrappedOperations;
+      },
+      {}
+    );
+
+    return wrappedRepositories;
+  }, {});
+};
 
 const createApplicationContext = async (overrides = {}) => {
   const env = {
@@ -35,74 +82,102 @@ const createApplicationContext = async (overrides = {}) => {
     }
   };
   const logger = overrides.logger || createLogger(env.logLevel);
-
-  await connectDatabase({
-    uri: env.mongoUri,
-    useInMemoryDb: env.useInMemoryDb,
-    logger,
-    mongooseInstance: overrides.mongooseInstance
+  const monitoringService = createMonitoringService({
+    activeColor: env.activeColor,
+    featureFlags: env.featureFlags,
+    nodeEnv: env.nodeEnv
   });
 
-  const repositories =
+  const databaseMode = env.useInMemoryDb ? "memory" : "mongo";
+  const connectionStartedAt = process.hrtime.bigint();
+  try {
+    await connectDatabase({
+      uri: env.mongoUri,
+      useInMemoryDb: env.useInMemoryDb,
+      logger,
+      mongooseInstance: overrides.mongooseInstance
+    });
+    monitoringService.setDatabaseConnectionState({
+      mode: databaseMode,
+      connected: !env.useInMemoryDb
+    });
+    monitoringService.observeRepositoryOperation({
+      repository: "database",
+      operation: "connect",
+      mode: databaseMode,
+      outcome: "success",
+      durationSeconds: Number(process.hrtime.bigint() - connectionStartedAt) / 1e9
+    });
+  } catch (error) {
+    monitoringService.setDatabaseConnectionState({
+      mode: databaseMode,
+      connected: false
+    });
+    monitoringService.observeRepositoryOperation({
+      repository: "database",
+      operation: "connect",
+      mode: databaseMode,
+      outcome: "error",
+      durationSeconds: Number(process.hrtime.bigint() - connectionStartedAt) / 1e9
+    });
+    throw error;
+  }
+
+  const rawRepositories =
     overrides.repositories ||
     createRepositories({
       useInMemoryDb: env.useInMemoryDb,
       defaultUsers
     });
+  const repositories = instrumentRepositories(rawRepositories, monitoringService);
 
   const featureFlagService = createFeatureFlagService(env.featureFlags);
   const authService = createAuthService({
     repositories,
     jwtSecret: env.jwtSecret,
-    jwtExpiresIn: env.jwtExpiresIn
+    jwtExpiresIn: env.jwtExpiresIn,
+    monitoringService
   });
   const incidentService = createIncidentService({
     repositories,
     slaHours: env.slaHours,
-    nowProvider: overrides.nowProvider
-  });
-  const busService = createBusService({
-    repositories,
-    nowProvider: overrides.nowProvider
-  });
-  const aiCorrectionService = createAICorrectionService({
-    provider: env.aiProvider
+    nowProvider: overrides.nowProvider,
+    monitoringService
   });
   const analyticsService = createAnalyticsService({
     authService,
     incidentService,
-    busService,
     featureFlagService
   });
 
   await authService.seedDefaultUsers(defaultUsers);
-  await busService.bootstrap();
+  monitoringService.updateIncidentSnapshot(await incidentService.getDashboardSummary());
 
   const controllers = {
     authController: createAuthController({ authService }),
     incidentController: createIncidentController({ incidentService }),
-    busController: createBusController({ busService }),
-    aiController: createAIController({ aiCorrectionService }),
     adminController: createAdminController({
       analyticsService,
       authService,
       featureFlagService,
-      incidentService
+      incidentService,
+      monitoringService
     }),
     healthController: createHealthController({
       featureFlagService,
       repositories,
-      activeColor: env.activeColor
+      activeColor: env.activeColor,
+      monitoringProvider: "prometheus",
+      metricsPath: "/metrics"
     })
   };
 
   const services = {
     authService,
     incidentService,
-    busService,
-    aiCorrectionService,
     analyticsService,
-    featureFlagService
+    featureFlagService,
+    monitoringService
   };
 
   const app = createApp({
@@ -126,15 +201,9 @@ const createRuntime = async (overrides = {}) => {
   const context = await createApplicationContext(overrides);
   const server = http.createServer(context.app);
   const io = createSocketServer(server, context.env.clientOrigin);
-  const busTrackerJob = createBusTrackerJob({
-    busService: context.services.busService,
-    io,
-    intervalMs: context.env.busUpdateIntervalMs,
-    logger: context.logger
-  });
   const escalationMonitorJob = createEscalationMonitorJob({
     incidentService: context.services.incidentService,
-    intervalMs: context.env.busUpdateIntervalMs,
+    intervalMs: context.env.escalationScanIntervalMs,
     logger: context.logger
   });
 
@@ -142,7 +211,6 @@ const createRuntime = async (overrides = {}) => {
     ...context,
     io,
     server,
-    busTrackerJob,
     escalationMonitorJob
   };
 };

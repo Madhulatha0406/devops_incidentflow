@@ -48,14 +48,10 @@ const env = {
   jwtExpiresIn: process.env.JWT_EXPIRES_IN || "8h",
   logLevel: process.env.LOG_LEVEL || "info",
   useInMemoryDb: toBoolean(process.env.USE_IN_MEMORY_DB, false),
-  busUpdateIntervalMs: toNumber(process.env.BUS_UPDATE_INTERVAL_MS, 5000),
+  escalationScanIntervalMs: toNumber(process.env.ESCALATION_SCAN_INTERVAL_MS, 5000),
   activeColor: process.env.ACTIVE_COLOR || "blue",
-  aiProvider: process.env.AI_PROVIDER || "local",
-  openAiApiKey: process.env.OPENAI_API_KEY || "",
   featureFlags: {
-    incidents: toBoolean(process.env.FEATURE_INCIDENTS, true),
-    busTracking: toBoolean(process.env.FEATURE_BUS_TRACKING, true),
-    aiCorrection: toBoolean(process.env.FEATURE_AI_CORRECTION, true)
+    incidents: toBoolean(process.env.FEATURE_INCIDENTS, true)
   },
   slaHours: {
     low: toNumber(process.env.SLA_LOW_HOURS, 24),

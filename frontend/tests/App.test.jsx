@@ -15,9 +15,11 @@ describe("App", () => {
         databaseMode: "mongo",
         activeColor: "blue",
         featureFlags: {
-          incidents: true,
-          busTracking: true,
-          aiCorrection: true
+          incidents: true
+        },
+        monitoring: {
+          provider: "prometheus",
+          metricsPath: "/metrics"
         }
       })
     });

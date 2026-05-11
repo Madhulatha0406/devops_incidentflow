@@ -1,6 +1,6 @@
 # IncidentFlow – SLA-Based IT Service Management System
 
-IncidentFlow is a production-ready MERN-style campus operations platform that combines three practical modules in one system:
+IncidentFlow is a production-ready MERN-style campus operations platform centered on one practical workflow:
 
 - SLA-based IT incident management with escalation logic
 
@@ -9,7 +9,7 @@ The project is structured for DevOps evaluation with Docker, Docker Compose, Jen
 
 ## Project Description
 
-IncidentFlow is a containerized web application for managing infrastructure-related issues within a college campus. Students report problems, administrators assign technicians, and technicians resolve incidents within predefined SLA time limits. The platform also includes bus tracking simulation, AI-based answer correction support, automated testing, CI/CD, and runtime monitoring to reflect a real DevOps workflow.
+IncidentFlow is a containerized web application for managing infrastructure-related issues within a college campus. Students report problems, administrators assign technicians, and technicians resolve incidents within predefined SLA time limits. The platform includes automated testing, CI/CD, Prometheus-based monitoring, and blackbox probing to reflect a real DevOps workflow.
 
 ## Architecture
 
@@ -30,7 +30,7 @@ The main objective of this project is to demonstrate a complete DevOps lifecycle
 - Maintain automated test coverage above the 70-75% target
 - Automate build, test, and delivery workflows
 - Run services in isolated Docker containers
-- Expose monitoring and operational visibility through logs and `/health`
+- Expose monitoring and operational visibility through logs, `/health`, `/metrics`, and Prometheus probe targets
 
 ## Presentation Guide
 
@@ -72,6 +72,8 @@ The main objective of this project is to demonstrate a complete DevOps lifecycle
 ### Monitoring and Logging
 
 - The `/health` endpoint exposes runtime status, active deployment color, database mode, and feature toggle state.
+- The `/metrics` endpoint exposes Prometheus application metrics for request rate, latency, error rate, payload sizes, repository timings, incident workflow activity, and database connectivity.
+- Prometheus blackbox probes add HTTP, TCP, and ICMP-style reachability metrics for network and packet-loss-style monitoring.
 - Request logging and error logging provide operational visibility for debugging and monitoring.
 
 ### Security and Secrets
@@ -82,7 +84,7 @@ The main objective of this project is to demonstrate a complete DevOps lifecycle
 
 ### Feature Toggles
 
-- Runtime feature flags let the admin enable or disable incidents, bus tracking, and AI correction without changing code.
+- Runtime feature flags let the admin enable or disable the incident workflow without changing code.
 - This demonstrates controlled rollout and operational flexibility.
 
 ### Ansible and GitHub Actions
@@ -95,8 +97,6 @@ The main objective of this project is to demonstrate a complete DevOps lifecycle
 - Student
   - Report incidents
   - Track own complaints
-  - View bus status and delay alerts
-  - Use AI answer review module
 - Technician
   - View assigned incidents
   - Update incident status
@@ -147,10 +147,15 @@ incidentflow-plus/
 - SLA-based issue tracking with deadline generation by priority
 - Escalation scan for breached incidents
 - Role-based incident visibility and updates
-- Live bus simulation with scheduled position updates
-- Delay alert generation for late buses
-- AI-based correction suggestions using a local heuristic scoring engine
-- Feature toggles for `incidents`, `busTracking`, and `aiCorrection`
+- Prometheus metrics at `/metrics` with:
+  - HTTP throughput, latency, in-flight requests, error counts
+  - request and response payload size histograms
+  - auth success and failure counters
+  - incident lifecycle counters and status gauges
+  - repository operation timings
+  - Node.js process, CPU, memory, and event-loop metrics
+- Blackbox HTTP, TCP, and ICMP probe metrics through Prometheus
+- Feature toggles for `incidents`
 - Health endpoint at `/health`
 - Structured request and error logging
 - Blue-green deployment support with reverse proxy switching
@@ -176,7 +181,6 @@ cp deploy/.env.deploy.example deploy/.env.deploy
 - `DOCKER_REGISTRY`
 - `BACKEND_IMAGE`
 - `FRONTEND_IMAGE`
-- `OPENAI_API_KEY` if you later replace the local AI engine with a hosted provider
 
 ## Local Development
 
@@ -207,6 +211,7 @@ If you want the frontend dev server to call the backend directly, set `VITE_API_
 ### Public
 
 - `GET /health`
+- `GET /metrics`
 - `POST /api/auth/register`
 - `POST /api/auth/login`
 
@@ -216,14 +221,6 @@ If you want the frontend dev server to call the backend directly, set `VITE_API_
 - `POST /api/incidents`
 - `PATCH /api/incidents/:id/assign`
 - `PATCH /api/incidents/:id/status`
-
-### Bus Tracking
-
-- `GET /api/buses`
-
-### AI Correction
-
-- `POST /api/ai/correct`
 
 ### Admin
 
@@ -304,7 +301,14 @@ The included plan lives at [`performance/jmeter/incidentflow-smoke-test.jmx`](pe
 - `GET /health`
 - `POST /api/auth/login`
 - authenticated `GET /api/incidents`
-- authenticated `GET /api/buses`
+- `GET /metrics`
+
+Use JMeter to generate load while Prometheus graphs these metrics:
+
+- `rate(incidentflow_http_requests_total[1m])`
+- `histogram_quantile(0.95, sum by (le, route) (rate(incidentflow_http_request_duration_seconds_bucket[5m])))`
+- `rate(incidentflow_http_errors_total[5m])`
+- `histogram_quantile(0.95, sum by (le, route) (rate(incidentflow_http_response_size_bytes_bucket[5m])))`
 
 JMeter also needs a valid Java installation. If `jmeter.bat` cannot find Java, set `JAVA_HOME` to a working JDK before running the smoke test.
 
@@ -328,6 +332,8 @@ The repository includes:
 - `backend/Dockerfile`
 - `frontend/Dockerfile`
 - `docker-compose.yml`
+- `deploy/prometheus/prometheus.yml`
+- `deploy/prometheus/blackbox.yml`
 - `deploy/proxy/*` for active blue/green proxy routing
 
 ### Start the stack
@@ -344,6 +350,8 @@ docker compose --env-file .env --env-file deploy/.env.deploy up -d --build
 - `frontend-blue`
 - `frontend-green`
 - `proxy`
+- `prometheus`
+- `blackbox`
 
 Proxy traffic is routed to the active color using:
 
@@ -462,7 +470,7 @@ git push -u origin main
 - Runtime config is environment-driven
 - MongoDB models are present for production persistence
 - In-memory repositories are used in tests for fast and deterministic verification
-- Bus updates and escalation scans run as background jobs
+- Escalation scans run as background jobs
 - Logging is enabled for both successful requests and failures
 - Feature flags can be changed at runtime through admin APIs
 

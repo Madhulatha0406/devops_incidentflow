@@ -11,7 +11,33 @@ const createActivityEntry = (actor, message, createdAt) => ({
   createdAt
 });
 
-const createIncidentService = ({ repositories, slaHours, nowProvider = () => new Date() }) => ({
+const buildIncidentSummary = (incidents, nowProvider) =>
+  incidents.reduce(
+    (summary, incident) => {
+      summary.total += 1;
+      summary.byStatus[incident.status] = (summary.byStatus[incident.status] || 0) + 1;
+      if (isBreached(incident, nowProvider())) {
+        summary.breached += 1;
+      }
+      if (incident.escalated) {
+        summary.escalated += 1;
+      }
+      return summary;
+    },
+    {
+      total: 0,
+      breached: 0,
+      escalated: 0,
+      byStatus: {}
+    }
+  );
+
+const createIncidentService = ({
+  repositories,
+  slaHours,
+  nowProvider = () => new Date(),
+  monitoringService = null
+}) => ({
   reportIncident: async (payload, reporter) => {
     const createdAt = nowProvider().toISOString();
     const priority = payload.priority || "medium";
@@ -29,6 +55,15 @@ const createIncidentService = ({ repositories, slaHours, nowProvider = () => new
       resolutionSummary: "",
       activityLog: [createActivityEntry(reporter, "Incident reported", createdAt)]
     });
+
+    monitoringService?.recordIncidentEvent({
+      action: "created",
+      priority: incident.priority,
+      status: incident.status,
+      actorRole: reporter?.role || "unknown"
+    });
+
+    monitoringService?.updateIncidentSnapshot(buildIncidentSummary(await repositories.incidents.list(), nowProvider));
 
     return incident;
   },
@@ -55,7 +90,7 @@ const createIncidentService = ({ repositories, slaHours, nowProvider = () => new
       throw new AppError("Technician not found", 404);
     }
 
-    return repositories.incidents.update(incidentId, {
+    const updatedIncident = await repositories.incidents.update(incidentId, {
       technicianId: String(technician._id),
       status: incident.status === "open" ? "assigned" : incident.status,
       activityLog: [
@@ -63,6 +98,17 @@ const createIncidentService = ({ repositories, slaHours, nowProvider = () => new
         createActivityEntry(adminUser, `Technician assigned: ${technician.name}`, nowProvider().toISOString())
       ]
     });
+
+    monitoringService?.recordIncidentEvent({
+      action: "assigned",
+      priority: updatedIncident.priority,
+      status: updatedIncident.status,
+      actorRole: adminUser?.role || "unknown"
+    });
+
+    monitoringService?.updateIncidentSnapshot(buildIncidentSummary(await repositories.incidents.list(), nowProvider));
+
+    return updatedIncident;
   },
   updateStatus: async (incidentId, updates, actor) => {
     const incident = await repositories.incidents.findById(incidentId);
@@ -93,7 +139,7 @@ const createIncidentService = ({ repositories, slaHours, nowProvider = () => new
 
     const activityMessage = `Status updated to ${nextStatus}`;
 
-    return repositories.incidents.update(incidentId, {
+    const updatedIncident = await repositories.incidents.update(incidentId, {
       status: nextStatus,
       resolutionSummary: updates.resolutionSummary || incident.resolutionSummary,
       activityLog: [
@@ -101,6 +147,17 @@ const createIncidentService = ({ repositories, slaHours, nowProvider = () => new
         createActivityEntry(actor, activityMessage, nowProvider().toISOString())
       ]
     });
+
+    monitoringService?.recordIncidentEvent({
+      action: "status_updated",
+      priority: updatedIncident.priority,
+      status: updatedIncident.status,
+      actorRole: actor?.role || "unknown"
+    });
+
+    monitoringService?.updateIncidentSnapshot(buildIncidentSummary(await repositories.incidents.list(), nowProvider));
+
+    return updatedIncident;
   },
   runEscalationScan: async () => {
     const incidents = await repositories.incidents.list();
@@ -121,8 +178,17 @@ const createIncidentService = ({ repositories, slaHours, nowProvider = () => new
         ]
       });
 
+      monitoringService?.recordIncidentEvent({
+        action: "escalated",
+        priority: updated.priority,
+        status: updated.status,
+        actorRole: "system"
+      });
+
       escalatedIncidents.push(updated);
     }
+
+    monitoringService?.updateIncidentSnapshot(buildIncidentSummary(await repositories.incidents.list(), nowProvider));
 
     return escalatedIncidents;
   },
@@ -154,6 +220,7 @@ const createIncidentService = ({ repositories, slaHours, nowProvider = () => new
 module.exports = {
   createIncidentService,
   createActivityEntry,
+  buildIncidentSummary,
   ADMIN_FINAL_STATUSES,
   TECHNICIAN_ALLOWED_STATUSES
 };

@@ -7,6 +7,7 @@ const { createRouter } = require("./routes");
 
 const createApp = ({ env, logger, controllers, services }) => {
   const app = express();
+  const monitoringService = services.monitoringService;
 
   app.use(helmet());
   app.use(
@@ -16,6 +17,10 @@ const createApp = ({ env, logger, controllers, services }) => {
   );
   app.use(express.json());
   app.use(createRequestLogger(logger));
+  if (monitoringService) {
+    app.use(monitoringService.createRequestMetricsMiddleware());
+    app.get("/metrics", monitoringService.handleMetrics);
+  }
   app.use("/health", controllers.healthController.getHealth);
   app.use("/api", createRouter({ controllers, services, env }));
   app.use(notFoundHandler);

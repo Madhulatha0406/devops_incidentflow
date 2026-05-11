@@ -1,4 +1,4 @@
-const createAdminController = ({ analyticsService, authService, featureFlagService, incidentService }) => ({
+const createAdminController = ({ analyticsService, authService, featureFlagService, incidentService, monitoringService }) => ({
   getDashboard: async (_req, res) => {
     const dashboard = await analyticsService.getDashboard();
     res.json({ dashboard });
@@ -19,6 +19,7 @@ const createAdminController = ({ analyticsService, authService, featureFlagServi
   },
   updateFeatureFlag: async (req, res) => {
     const result = featureFlagService.setFlag(req.params.name, req.body.enabled);
+    monitoringService?.updateFeatureFlags(featureFlagService.list());
     res.json({
       message: "Feature flag updated successfully",
       featureFlag: result

@@ -49,7 +49,7 @@ describe("middleware branches", () => {
 
   test("feature toggle middleware rejects disabled features", () => {
     const next = jest.fn();
-    requireFeature({ isEnabled: jest.fn().mockReturnValue(false) }, "busTracking")({}, {}, next);
+    requireFeature({ isEnabled: jest.fn().mockReturnValue(false) }, "incidents")({}, {}, next);
     expect(next.mock.calls[0][0].statusCode).toBe(503);
   });
 

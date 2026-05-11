@@ -2,13 +2,27 @@ const request = require("supertest");
 const { createTestContext, loginAndGetToken } = require("./helpers");
 
 describe("API integration", () => {
-  test("supports auth, incidents, admin workflow, buses, AI, and feature toggles", async () => {
+  test(
+    "supports auth, incidents, admin workflow, metrics, and feature toggles",
+    async () => {
     const context = await createTestContext();
     const { app } = context;
 
     const health = await request(app).get("/health");
     expect(health.status).toBe(200);
     expect(health.body.status).toBe("ok");
+    expect(health.body.monitoring).toEqual({
+      provider: "prometheus",
+      metricsPath: "/metrics"
+    });
+
+    const metrics = await request(app).get("/metrics");
+    expect(metrics.status).toBe(200);
+    expect(metrics.headers["content-type"]).toContain("text/plain");
+    expect(metrics.text).toContain("incidentflow_http_requests_total");
+    expect(metrics.text).toContain("incidentflow_http_request_size_bytes");
+    expect(metrics.text).toContain("incidentflow_http_response_size_bytes");
+    expect(metrics.text).toContain("incidentflow_repository_operations_total");
 
     const register = await request(app).post("/api/auth/register").send({
       name: "Asha Student",
@@ -70,23 +84,6 @@ describe("API integration", () => {
     expect(incidents.body.incidents).toHaveLength(1);
     expect(incidents.body.incidents[0].status).toBe("completed");
 
-    const buses = await request(app)
-      .get("/api/buses")
-      .set("Authorization", `Bearer ${studentToken}`);
-    expect(buses.status).toBe(200);
-    expect(buses.body.buses.length).toBeGreaterThan(0);
-
-    const analysis = await request(app)
-      .post("/api/ai/correct")
-      .set("Authorization", `Bearer ${studentToken}`)
-      .send({
-        question: "Explain failover",
-        answer: "Failover keeps services running because there is a backup system.",
-        rubric: "Define failover, backup systems, availability, and monitoring."
-      });
-    expect(analysis.status).toBe(200);
-    expect(analysis.body.analysis).toHaveProperty("verdict");
-
     const dashboard = await request(app)
       .get("/api/admin/dashboard")
       .set("Authorization", `Bearer ${adminToken}`);
@@ -94,16 +91,26 @@ describe("API integration", () => {
     expect(dashboard.body.dashboard).toHaveProperty("usersByRole");
 
     const flagUpdate = await request(app)
-      .patch("/api/admin/feature-flags/busTracking")
+      .patch("/api/admin/feature-flags/incidents")
       .set("Authorization", `Bearer ${adminToken}`)
       .send({
         enabled: false
       });
     expect(flagUpdate.status).toBe(200);
 
-    const disabledBusModule = await request(app)
-      .get("/api/buses")
+    const disabledIncidentModule = await request(app)
+      .get("/api/incidents")
       .set("Authorization", `Bearer ${studentToken}`);
-    expect(disabledBusModule.status).toBe(503);
-  });
+    expect(disabledIncidentModule.status).toBe(503);
+
+    const enrichedMetrics = await request(app).get("/metrics");
+    expect(enrichedMetrics.text).toContain('incidentflow_auth_attempts_total{action="login",outcome="success",role="student"');
+    expect(enrichedMetrics.text).toContain('incidentflow_incident_events_total{action="created"');
+    expect(enrichedMetrics.text).toContain('incidentflow_incident_events_total{action="assigned"');
+    expect(enrichedMetrics.text).toContain('incidentflow_incident_events_total{action="status_updated"');
+    expect(enrichedMetrics.text).toContain("incidentflow_incidents_total");
+    expect(enrichedMetrics.text).toContain('incidentflow_incidents_by_status{status="completed"');
+    },
+    20000
+  );
 });

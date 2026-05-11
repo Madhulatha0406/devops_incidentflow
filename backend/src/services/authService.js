@@ -16,7 +16,7 @@ const sanitizeUser = (user) => {
 
 const normalizeEmail = (email) => String(email || "").trim().toLowerCase();
 
-const createAuthService = ({ repositories, jwtSecret, jwtExpiresIn, bcryptLib = bcrypt }) => ({
+const createAuthService = ({ repositories, jwtSecret, jwtExpiresIn, bcryptLib = bcrypt, monitoringService = null }) => ({
   seedDefaultUsers: async (defaultUsers) => repositories.users.seedDefaults(defaultUsers),
   createUser: async ({ name, email, password, role = "student", department, specialty }) => {
     const normalizedEmail = normalizeEmail(email);
@@ -45,10 +45,15 @@ const createAuthService = ({ repositories, jwtSecret, jwtExpiresIn, bcryptLib = 
         const existing = await repositories.users.findByEmail(normalizedEmail);
 
         if (existing) {
+          monitoringService?.recordAuthAttempt({
+            action: "register",
+            outcome: "failure",
+            role: "student"
+          });
           throw new AppError("User already exists with this email", 409);
         }
 
-        return repositories.users.create({
+        const createdUser = await repositories.users.create({
           name: payload.name,
           email: normalizedEmail,
           passwordHash: await bcryptLib.hash(payload.password, 10),
@@ -56,18 +61,36 @@ const createAuthService = ({ repositories, jwtSecret, jwtExpiresIn, bcryptLib = 
           department: payload.department || "Campus Services",
           specialty: payload.specialty || ""
         });
+
+        monitoringService?.recordAuthAttempt({
+          action: "register",
+          outcome: "success",
+          role: "student"
+        });
+
+        return createdUser;
       })()
     ),
   login: async ({ email, password }) => {
     const user = await repositories.users.findByEmail(normalizeEmail(email));
 
     if (!user) {
+      monitoringService?.recordAuthAttempt({
+        action: "login",
+        outcome: "failure",
+        role: "unknown"
+      });
       throw new AppError("Invalid email or password", 401);
     }
 
     const isValidPassword = await bcryptLib.compare(password, user.passwordHash);
 
     if (!isValidPassword) {
+      monitoringService?.recordAuthAttempt({
+        action: "login",
+        outcome: "failure",
+        role: user.role || "unknown"
+      });
       throw new AppError("Invalid email or password", 401);
     }
 
@@ -80,6 +103,12 @@ const createAuthService = ({ repositories, jwtSecret, jwtExpiresIn, bcryptLib = 
       jwtSecret,
       jwtExpiresIn
     );
+
+    monitoringService?.recordAuthAttempt({
+      action: "login",
+      outcome: "success",
+      role: user.role || "unknown"
+    });
 
     return {
       token,

@@ -1,8 +1,6 @@
 const express = require("express");
 const { createAuthRoutes } = require("./authRoutes");
 const { createIncidentRoutes } = require("./incidentRoutes");
-const { createBusRoutes } = require("./busRoutes");
-const { createAIRoutes } = require("./aiRoutes");
 const { createAdminRoutes } = require("./adminRoutes");
 const { createHealthRoutes } = require("./healthRoutes");
 const { createAuthenticate, authorize } = require("../middleware/auth");
@@ -24,22 +22,6 @@ const createRouter = ({ controllers, services, env }) => {
       authenticate,
       authorize,
       requireFeature: requireFeature(services.featureFlagService, "incidents")
-    })
-  );
-  router.use(
-    "/buses",
-    createBusRoutes({
-      controller: controllers.busController,
-      authenticate,
-      requireFeature: requireFeature(services.featureFlagService, "busTracking")
-    })
-  );
-  router.use(
-    "/ai",
-    createAIRoutes({
-      controller: controllers.aiController,
-      authenticate,
-      requireFeature: requireFeature(services.featureFlagService, "aiCorrection")
     })
   );
   router.use(

@@ -1,4 +1,10 @@
-const createHealthController = ({ featureFlagService, repositories, activeColor }) => ({
+const createHealthController = ({
+  featureFlagService,
+  repositories,
+  activeColor,
+  monitoringProvider = null,
+  metricsPath = null
+}) => ({
   getHealth: async (_req, res) => {
     res.json({
       status: "ok",
@@ -6,7 +12,14 @@ const createHealthController = ({ featureFlagService, repositories, activeColor 
       uptimeSeconds: Math.round(process.uptime()),
       databaseMode: repositories.mode,
       activeColor,
-      featureFlags: featureFlagService.list()
+      featureFlags: featureFlagService.list(),
+      monitoring:
+        monitoringProvider && metricsPath
+          ? {
+              provider: monitoringProvider,
+              metricsPath
+            }
+          : null
     });
   }
 });

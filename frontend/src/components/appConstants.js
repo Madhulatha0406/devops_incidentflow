@@ -11,9 +11,7 @@ const roleDescriptions = {
 };
 
 const defaultFeatureFlags = {
-  incidents: true,
-  busTracking: true,
-  aiCorrection: true
+  incidents: true
 };
 
 const incidentStatuses = ["open", "assigned", "in_progress", "closed", "resolved", "completed"];

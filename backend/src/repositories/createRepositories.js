@@ -1,7 +1,6 @@
 const bcrypt = require("bcryptjs");
 const { User } = require("../models/User");
 const { Incident } = require("../models/Incident");
-const { BusState } = require("../models/BusState");
 
 const clone = (value) => JSON.parse(JSON.stringify(value));
 
@@ -39,7 +38,6 @@ const seedMemoryUsers = (defaultUsers) =>
 const createMemoryRepositories = ({ defaultUsers = [] } = {}) => {
   const users = seedMemoryUsers(defaultUsers);
   const incidents = [];
-  let busStates = [];
 
   return {
     mode: "memory",
@@ -88,13 +86,6 @@ const createMemoryRepositories = ({ defaultUsers = [] } = {}) => {
 
         return clone(incidents[index]);
       }
-    },
-    buses: {
-      listAll: async () => clone(busStates),
-      saveAll: async (states) => {
-        busStates = clone(states);
-        return clone(busStates);
-      }
     }
   };
 };
@@ -132,19 +123,6 @@ const createMongoRepositories = () => ({
       Incident.findByIdAndUpdate(id, updates, {
         new: true
       }).lean()
-  },
-  buses: {
-    listAll: async () => BusState.find().sort({ busId: 1 }).lean(),
-    saveAll: async (states) => {
-      for (const state of states) {
-        await BusState.findOneAndUpdate({ busId: state.busId }, state, {
-          upsert: true,
-          new: true
-        });
-      }
-
-      return BusState.find().sort({ busId: 1 }).lean();
-    }
   }
 });
 

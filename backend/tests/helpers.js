@@ -13,6 +13,7 @@ const createTestContext = async (overrides = {}) =>
   createApplicationContext({
     logger: createMockLogger(),
     env: {
+      nodeEnv: "test",
       useInMemoryDb: true,
       jwtSecret: "test-secret",
       jwtExpiresIn: "1h",

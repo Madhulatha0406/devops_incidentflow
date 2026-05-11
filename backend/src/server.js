@@ -4,7 +4,6 @@ const { createRuntime } = require("./bootstrap");
 const bootstrap = async () => {
   const runtime = await createRuntime();
 
-  runtime.busTrackerJob.start();
   runtime.escalationMonitorJob.start();
 
   runtime.server.listen(env.port, () => {

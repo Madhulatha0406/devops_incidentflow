@@ -3,9 +3,8 @@ const { createRepositories } = require("../src/repositories/createRepositories")
 const { defaultUsers } = require("../src/config/defaultUsers");
 const { createAuthService } = require("../src/services/authService");
 const { createIncidentService } = require("../src/services/incidentService");
-const { createBusService } = require("../src/services/busService");
-const { createAICorrectionService, scoreCoverage } = require("../src/services/aiCorrectionService");
 const { createFeatureFlagService } = require("../src/services/featureFlagService");
+const { createMonitoringService } = require("../src/services/monitoringService");
 const { createLogger } = require("../src/config/logger");
 const { createMockLogger } = require("./helpers");
 
@@ -81,23 +80,51 @@ describe("additional branch coverage", () => {
     expect(await service.runEscalationScan()).toEqual([]);
   });
 
-  test("bus service covers bootstrap existing state and simulation", async () => {
-    const repositories = createRepositories({ useInMemoryDb: true, defaultUsers: [] });
-    const service = createBusService({
-      repositories,
-      nowProvider: () => new Date("2026-01-01T00:00:00.000Z")
+  test("monitoring service exposes prometheus metrics", async () => {
+    const service = createMonitoringService({
+      activeColor: "green",
+      nodeEnv: "test",
+      featureFlags: {
+        incidents: true
+      }
     });
 
-    await repositories.buses.saveAll([{ busId: "BUS-X", delayMinutes: 0 }]);
-    expect((await service.bootstrap())[0].busId).toBe("BUS-X");
-    expect((await service.advanceSimulation())[0]).toHaveProperty("busId");
-    expect(await service.getDelayAlerts()).toEqual([]);
-  });
-
-  test("ai correction service handles missing data and empty rubric coverage", () => {
-    expect(scoreCoverage(["network"], [])).toBe(0);
-    const service = createAICorrectionService();
-    expect(() => service.analyzeAnswer({ answer: "", rubric: "" })).toThrow("Both answer and rubric are required");
+    service.updateFeatureFlags({ incidents: false });
+    service.recordAuthAttempt({ action: "login", outcome: "success", role: "student" });
+    service.recordIncidentEvent({
+      action: "created",
+      priority: "high",
+      status: "open",
+      actorRole: "student"
+    });
+    service.observeRepositoryOperation({
+      repository: "users",
+      operation: "findByEmail",
+      mode: "memory",
+      outcome: "success",
+      durationSeconds: 0.01
+    });
+    service.setDatabaseConnectionState({
+      mode: "memory",
+      connected: false
+    });
+    service.updateIncidentSnapshot({
+      total: 2,
+      breached: 1,
+      escalated: 1,
+      byStatus: {
+        open: 1,
+        completed: 1
+      }
+    });
+    const metrics = await service.metrics();
+    expect(metrics).toContain("incidentflow_http_requests_total");
+    expect(metrics).toContain('flag="incidents"');
+    expect(metrics).toContain("incidentflow_auth_attempts_total");
+    expect(metrics).toContain("incidentflow_incident_events_total");
+    expect(metrics).toContain("incidentflow_repository_operations_total");
+    expect(metrics).toContain("incidentflow_database_connected");
+    expect(metrics).toContain('status="completed"');
   });
 
   test("bootstrap and runtime create complete application context", async () => {
@@ -105,6 +132,7 @@ describe("additional branch coverage", () => {
     const context = await createApplicationContext({
       logger,
       env: {
+        nodeEnv: "test",
         useInMemoryDb: true,
         jwtSecret: "secret"
       }
@@ -116,17 +144,36 @@ describe("additional branch coverage", () => {
     const runtime = await createRuntime({
       logger,
       env: {
+        nodeEnv: "test",
         useInMemoryDb: true,
         jwtSecret: "secret",
-        busUpdateIntervalMs: 99999
+        escalationScanIntervalMs: 99999
       }
     });
 
-    runtime.busTrackerJob.stop();
     runtime.escalationMonitorJob.stop();
     runtime.io.close();
     runtime.server.close();
 
     expect(runtime.server).toBeTruthy();
+  });
+
+  test("bootstrap reports database connection failures", async () => {
+    const logger = createMockLogger();
+
+    await expect(
+      createApplicationContext({
+        logger,
+        env: {
+          nodeEnv: "test",
+          useInMemoryDb: false,
+          mongoUri: "mongodb://invalid-host",
+          jwtSecret: "secret"
+        },
+        mongooseInstance: {
+          connect: jest.fn().mockRejectedValue(new Error("database unavailable"))
+        }
+      })
+    ).rejects.toThrow("database unavailable");
   });
 });
