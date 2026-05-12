@@ -1,0 +1,36 @@
+groups:
+  - name: incidentflow-application
+    interval: 30s
+    rules:
+      - record: incidentflow:http_requests_per_second:1m
+        expr: sum by (method, route) (rate(incidentflow_http_requests_total[1m]))
+
+      - record: incidentflow:http_error_rate_percent:5m
+        expr: 100 * sum(rate(incidentflow_http_errors_total[5m])) / clamp_min(sum(rate(incidentflow_http_requests_total[5m])), 1)
+
+      - record: incidentflow:http_p95_latency_seconds:5m
+        expr: histogram_quantile(0.95, sum by (le, route) (rate(incidentflow_http_request_duration_seconds_bucket[5m])))
+
+      - record: incidentflow:http_p95_response_size_bytes:5m
+        expr: histogram_quantile(0.95, sum by (le, route) (rate(incidentflow_http_response_size_bytes_bucket[5m])))
+
+      - record: incidentflow:http_in_flight_requests
+        expr: max(incidentflow_http_requests_in_flight)
+
+  - name: incidentflow-network
+    interval: 30s
+    rules:
+      - record: incidentflow:probe_availability_percent:5m
+        expr: 100 * avg_over_time(probe_success[5m])
+
+      - record: incidentflow:probe_packet_loss_percent:5m
+        expr: 100 * (1 - avg_over_time(probe_success{job="incidentflow-icmp-probes"}[5m]))
+
+      - record: incidentflow:probe_http_duration_seconds:5m
+        expr: avg_over_time(probe_duration_seconds{job="incidentflow-http-probes"}[5m])
+
+      - record: incidentflow:probe_tcp_duration_seconds:5m
+        expr: avg_over_time(probe_duration_seconds{job="incidentflow-tcp-probes"}[5m])
+
+      - record: incidentflow:probe_icmp_duration_seconds:5m
+        expr: avg_over_time(probe_duration_seconds{job="incidentflow-icmp-probes"}[5m])

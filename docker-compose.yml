@@ -118,6 +118,7 @@ services:
       - --storage.tsdb.path=/prometheus
     volumes:
       - ./deploy/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./deploy/prometheus/rules.yml:/etc/prometheus/rules.yml:ro
       - prometheus_data:/prometheus
     depends_on:
       backend-blue:

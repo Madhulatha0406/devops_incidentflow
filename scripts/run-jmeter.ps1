@@ -1,5 +1,6 @@
 param(
   [string]$JMeterExecutable = "",
+  [string]$JavaExecutable = "",
   [string]$PlanPath = "performance/jmeter/incidentflow-smoke-test.jmx",
   [string]$ResultsPath = "performance/jmeter/results.jtl",
   [string]$ReportPath = "performance/jmeter/report",
@@ -9,6 +10,11 @@ param(
   [string]$StudentEmail = "student@incidentflow.local",
   [string]$StudentPassword = "Password123!"
 )
+
+$workspaceRoot = (Get-Location).Path
+$PlanPath = [System.IO.Path]::GetFullPath((Join-Path $workspaceRoot $PlanPath))
+$ResultsPath = [System.IO.Path]::GetFullPath((Join-Path $workspaceRoot $ResultsPath))
+$ReportPath = [System.IO.Path]::GetFullPath((Join-Path $workspaceRoot $ReportPath))
 
 if (-not $JMeterExecutable) {
   if ($env:JMETER_HOME) {
@@ -31,10 +37,27 @@ if (-not $JMeterExecutable -or -not (Test-Path $JMeterExecutable)) {
   exit 1
 }
 
+$jmeterBinDir = Split-Path -Path $JMeterExecutable -Parent
+$jmeterJarPath = Join-Path $jmeterBinDir "ApacheJMeter.jar"
+
+if (-not $JavaExecutable -and $env:JAVA_HOME) {
+  $candidateJava = Join-Path $env:JAVA_HOME "bin\java.exe"
+  if (Test-Path $candidateJava) {
+    $JavaExecutable = $candidateJava
+  }
+}
+
 if ($env:JAVA_HOME) {
   $javaBin = Join-Path $env:JAVA_HOME "bin"
   if (Test-Path (Join-Path $javaBin "java.exe")) {
     $env:PATH = "$javaBin;$env:PATH"
+  }
+}
+
+if (-not $JavaExecutable) {
+  $javaCommand = Get-Command java.exe -ErrorAction SilentlyContinue
+  if ($javaCommand) {
+    $JavaExecutable = $javaCommand.Source
   }
 }
 
@@ -65,12 +88,29 @@ Set-Content -Path $renderedPlanPath -Value $planContent -Encoding UTF8
 New-Item -ItemType Directory -Force -Path $ReportPath | Out-Null
 
 try {
-  & $JMeterExecutable `
-    -n `
-    -t $renderedPlanPath `
-    -l $ResultsPath `
-    -e `
-    -o $ReportPath
+  if ($JavaExecutable -and (Test-Path $JavaExecutable) -and (Test-Path $jmeterJarPath)) {
+    Push-Location $jmeterBinDir
+    try {
+      & $JavaExecutable `
+        -jar $jmeterJarPath `
+        -n `
+        -t $renderedPlanPath `
+        -l $ResultsPath `
+        -e `
+        -o $ReportPath
+    }
+    finally {
+      Pop-Location
+    }
+  }
+  else {
+    & $JMeterExecutable `
+      -n `
+      -t $renderedPlanPath `
+      -l $ResultsPath `
+      -e `
+      -o $ReportPath
+  }
 }
 finally {
   if (Test-Path $renderedPlanPath) {

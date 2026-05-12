@@ -2,7 +2,7 @@ pipeline {
   agent any
 
   environment {
-    REGISTRY = "${env.DOCKER_REGISTRY ?: 'docker.io/yourname'}"
+    REGISTRY = "${env.DOCKER_REGISTRY ?: 'docker.io/madhulatha07'}"
     BACKEND_IMAGE = "${env.BACKEND_IMAGE ?: 'incidentflow-plus-backend'}"
     FRONTEND_IMAGE = "${env.FRONTEND_IMAGE ?: 'incidentflow-plus-frontend'}"
     COVERAGE_TARGET = "75"
@@ -10,6 +10,9 @@ pipeline {
     DOCKER_CONFIG = "${env.DOCKER_CONFIG ?: 'C:\\Users\\madhu\\.docker'}"
     SONAR_JDK_TOOL = "${env.SONAR_JDK_TOOL ?: 'JDK17'}"
     JMETER_JDK_TOOL = "${env.JMETER_JDK_TOOL ?: 'JDK17'}"
+    JMETER_DEFAULT_PROTOCOL = "${env.JMETER_PROTOCOL ?: 'https'}"
+    JMETER_DEFAULT_HOST = "${env.JMETER_HOST ?: 'incidentflow-frontend.onrender.com'}"
+    JMETER_DEFAULT_PORT = "${env.JMETER_PORT ?: '443'}"
   }
 
   triggers {
@@ -273,10 +276,9 @@ exit /b 0
     stage('JMeter Smoke Test') {
       steps {
         script {
-          if (!env.JMETER_HOST?.trim()) {
-            echo 'Skipping JMeter smoke test because JMETER_HOST is not configured.'
-            return
-          }
+          def jmeterProtocol = env.JMETER_DEFAULT_PROTOCOL
+          def jmeterHost = env.JMETER_DEFAULT_HOST
+          def jmeterPort = env.JMETER_DEFAULT_PORT
 
           if (isUnix()) {
             def jmeterStatus = sh(script: 'command -v jmeter >/dev/null 2>&1', returnStatus: true)
@@ -290,9 +292,9 @@ exit /b 0
             withEnv([
               "JAVA_HOME=${jmeterJdkHome}",
               "PATH+JMETER_JAVA=${jmeterJdkHome}/bin",
-              "PROTOCOL=${env.JMETER_PROTOCOL ?: 'http'}",
-              "HOST=${env.JMETER_HOST}",
-              "PORT=${env.JMETER_PORT ?: '5000'}",
+              "PROTOCOL=${jmeterProtocol}",
+              "HOST=${jmeterHost}",
+              "PORT=${jmeterPort}",
               "STUDENT_EMAIL=${env.JMETER_STUDENT_EMAIL ?: 'student@incidentflow.local'}",
               "STUDENT_PASSWORD=${env.JMETER_STUDENT_PASSWORD ?: 'Password123!'}"
             ]) {
@@ -314,9 +316,9 @@ exit /b 0
               bat """
 @echo off
 C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe -ExecutionPolicy Bypass -File scripts\\run-jmeter.ps1 ^
-  -Protocol ${env.JMETER_PROTOCOL ?: 'http'} ^
-  -TargetHost ${env.JMETER_HOST} ^
-  -Port ${env.JMETER_PORT ?: '5000'} ^
+  -Protocol ${jmeterProtocol} ^
+  -TargetHost ${jmeterHost} ^
+  -Port ${jmeterPort} ^
   -StudentEmail ${env.JMETER_STUDENT_EMAIL ?: 'student@incidentflow.local'} ^
   -StudentPassword ${env.JMETER_STUDENT_PASSWORD ?: 'Password123!'}
 """
